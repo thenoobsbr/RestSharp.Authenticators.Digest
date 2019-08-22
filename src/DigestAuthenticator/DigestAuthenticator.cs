@@ -6,40 +6,40 @@ namespace RestSharp.Authenticators.Digest
     using RestSharp;
 
     /// <summary>
-    /// Midleware de autenticação Digest para <see cref="IRestClient" />.
+    /// Digest midleware for <see cref="IRestClient"/>.
     /// </summary>
     public class DigestAuthenticator : IAuthenticator
     {
         /// <summary>
-        /// O usuário da autenticação.
+        /// The username.
         /// </summary>
-        private readonly string usuario;
+        private readonly string username;
 
         /// <summary>
-        /// A senha de autenticação.
+        /// The password.
         /// </summary>
-        private readonly string senha; 
+        private readonly string password; 
 
         /// <summary>
-        /// Inicializa uma nova instância de <see cref="DigestAuthenticator" />.
+        /// Creates a new instance of <see cref="DigestAuthenticator"/> class.
         /// </summary>
-        /// <param name="usuario">O usuário de autenticação.</param>
-        /// <param name="senha">A senha de autenticação.</param>
-        public DigestAuthenticator(string usuario, string senha)
+        /// <param name="username">The username.</param>
+        /// <param name="password">The password.</param>
+        public DigestAuthenticator(string username, string password)
         {
-            this.usuario = usuario;
-            this.senha = senha;
+            this.username = username;
+            this.password = password;
         } 
 
         /// <inheritdoc cref="IAuthenticator" />.
         public void Authenticate(IRestClient client, IRestRequest request)
         {
-            request.Credentials = new NetworkCredential(usuario, senha); 
+            request.Credentials = new NetworkCredential(username, this.password); 
 
             var uri = client.BuildUri(request);
-            var manager = new DigestAuthenticatorManager(client.BaseUrl, usuario, senha);
-            manager.ObterDadosAutenticacaoDigest(uri.PathAndQuery, request.Method);
-            var digestHeader = manager.ObterDigestHeader(uri.PathAndQuery, request.Method);
+            var manager = new DigestAuthenticatorManager(client.BaseUrl, this.username, this.password);
+            manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method);
+            var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
             request.AddParameter("Authorization", digestHeader, ParameterType.HttpHeader);
         }
     } 
