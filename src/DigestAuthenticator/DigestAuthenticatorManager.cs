@@ -129,6 +129,7 @@ namespace RestSharp.Authenticators.Digest
             var uri = new Uri($"{host}{path}");
             var request = (HttpWebRequest)WebRequest.Create(uri);
             request.Method = method.ToString();
+            request.ContentLength = 0;
 
             HttpWebResponse response;
             try
