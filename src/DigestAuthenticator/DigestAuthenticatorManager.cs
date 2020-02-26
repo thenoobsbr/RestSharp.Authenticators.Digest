@@ -126,7 +126,7 @@ namespace RestSharp.Authenticators.Digest
         /// <param name="method">The request method.</param>
         public void GetDigestAuthHeader(string path, Method method)
         {
-            var uri = new Uri($"{host}{path}");
+            var uri = new Uri(host, path);
             var request = (HttpWebRequest)WebRequest.Create(uri);
             request.Method = method.ToString();
             request.ContentLength = 0;
