@@ -46,6 +46,11 @@ namespace RestSharp.Authenticators.Digest
         private string password;
 
         /// <summary>
+        /// The timeout.
+        /// </summary>
+        private int timeout;
+
+        /// <summary>
         /// The Realm that is returned by the first digest request (without the data).
         /// </summary>
         private string realm;
@@ -76,11 +81,13 @@ namespace RestSharp.Authenticators.Digest
         /// <param name="host">The host.</param>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
-        public DigestAuthenticatorManager(Uri host, string username, string password)
+        /// <param name="timeout">The timeout.</param>
+        public DigestAuthenticatorManager(Uri host, string username, string password, int timeout)
         {
             this.host = host;
             this.username = username;
             this.password = password;
+            this.timeout = timeout;
         }
 
         /// <summary>
@@ -130,6 +137,7 @@ namespace RestSharp.Authenticators.Digest
             var request = (HttpWebRequest)WebRequest.Create(uri);
             request.Method = method.ToString();
             request.ContentLength = 0;
+            request.Timeout = timeout;
 
             HttpWebResponse response;
             try
