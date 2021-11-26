@@ -18,7 +18,13 @@ namespace RestSharp.Authenticators.Digest
         /// <summary>
         /// The password.
         /// </summary>
-        private readonly string password; 
+        private readonly string password;
+
+
+        /// <summary>
+        /// The timeout.
+        /// </summary>
+        public int Timeout { get; set; } = 100000; //default WebRequest timeout
 
         /// <summary>
         /// Creates a new instance of <see cref="DigestAuthenticator"/> class.
@@ -37,7 +43,7 @@ namespace RestSharp.Authenticators.Digest
             request.Credentials = new NetworkCredential(username, this.password); 
 
             var uri = client.BuildUri(request);
-            var manager = new DigestAuthenticatorManager(client.BaseUrl, this.username, this.password);
+            var manager = new DigestAuthenticatorManager(client.BaseUrl, this.username, this.password, Timeout);
             manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method);
             var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
             request.AddParameter("Authorization", digestHeader, ParameterType.HttpHeader);
