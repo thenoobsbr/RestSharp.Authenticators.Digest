@@ -1,4 +1,4 @@
-namespace RestSharp.Authenticators.Digest
+﻿namespace RestSharp.Authenticators.Digest
 {
     using System.Collections.Generic;
     using System.Globalization;
@@ -18,7 +18,12 @@ namespace RestSharp.Authenticators.Digest
         /// <summary>
         /// Header Realm.
         /// </summary>
-        private const string REALM = "Digest realm";
+        private const string DIGEST_REALM = "Digest realm";
+
+        /// <summary>
+        /// Header Realm.
+        /// </summary>
+        private const string REALM = "realm";
 
         /// <summary>
         /// Header nonce.
@@ -33,45 +38,45 @@ namespace RestSharp.Authenticators.Digest
         /// <summary>
         /// The host.
         /// </summary>
-        private Uri host;
+        private readonly Uri _host;
 
         /// <summary>
         /// The user.
         /// </summary>
-        private string username;
+        private readonly string _username;
 
         /// <summary>
         /// The password.
         /// </summary>
-        private string password;
+        private readonly string _password;
 
         /// <summary>
         /// The timeout.
         /// </summary>
-        private int timeout;
+        private readonly int _timeout;
 
         /// <summary>
         /// The Realm that is returned by the first digest request (without the data).
         /// </summary>
-        private string realm;
+        private string _realm;
 
         /// <summary>
         /// The nonce that is returned by the first digest request (without the data).
         /// </summary>
-        private string nonce;
+        private string _nonce;
 
         /// <summary>
         /// The qop that is returned by the first digest request (without the data).
         /// </summary>
-        private string qop;
+        private string _qop;
 
         /// <summary>
         /// The cnounce that is generated randomly by the application.
         /// </summary>
-        private string cnonce;
+        private string _cnonce;
 
         /// <summary>
-        /// The nounce count (usualy 000001)
+        /// The nounce count (usually 000001)
         /// </summary>
         private const int NONCE_COUNT = 1;
 
@@ -84,10 +89,10 @@ namespace RestSharp.Authenticators.Digest
         /// <param name="timeout">The timeout.</param>
         public DigestAuthenticatorManager(Uri host, string username, string password, int timeout)
         {
-            this.host = host;
-            this.username = username;
-            this.password = password;
-            this.timeout = timeout;
+            _host = host;
+            _username = username;
+            _password = password;
+            _timeout = timeout;
         }
 
         /// <summary>
@@ -95,7 +100,7 @@ namespace RestSharp.Authenticators.Digest
         /// </summary>
         /// <param name="input">The input.</param>
         /// <returns>The MD5.</returns>
-        private string GenerateMD5(string input)
+        private static string GenerateMD5(string input)
         {
             var inputBytes = Encoding.ASCII.GetBytes(input);
             var hash = MD5.Create().ComputeHash(inputBytes);
@@ -112,18 +117,18 @@ namespace RestSharp.Authenticators.Digest
         /// <returns>The digest header.</returns>
         public string GetDigestHeader(string digestUri, Method method)
         {
-            var hash1 = GenerateMD5($"{this.username}:{this.realm}:{this.password}");
+            var hash1 = GenerateMD5($"{_username}:{_realm}:{_password}");
             var hash2 = GenerateMD5($"{method}:{digestUri}");
-            var digestResponse = GenerateMD5($"{hash1}:{this.nonce}:{NONCE_COUNT:00000000}:{this.cnonce}:{this.qop}:{hash2}");
-            return $"Digest username=\"{this.username}\"," +
-                $"realm=\"{this.realm}\"," +
-                $"nonce=\"{this.nonce}\"," +
+            var digestResponse = GenerateMD5($"{hash1}:{_nonce}:{NONCE_COUNT:00000000}:{_cnonce}:{_qop}:{hash2}");
+            return $"Digest username=\"{_username}\"," +
+                $"realm=\"{_realm}\"," +
+                $"nonce=\"{_nonce}\"," +
                 $"uri=\"{digestUri}\"," +
-                $"algorithm=MD5," +
+                "algorithm=MD5," +
                 $"response=\"{digestResponse}\"," +
-                $"qop={this.qop}," +
+                $"qop={_qop}," +
                 $"nc={NONCE_COUNT:00000000}," +
-                $"cnonce=\"{this.cnonce}\"";
+                $"cnonce=\"{_cnonce}\"";
         }
 
         /// <summary>
@@ -133,20 +138,20 @@ namespace RestSharp.Authenticators.Digest
         /// <param name="method">The request method.</param>
         public void GetDigestAuthHeader(string path, Method method)
         {
-            var uri = new Uri(host, path);
+            var uri = new Uri(_host, path);
             var request = (HttpWebRequest)WebRequest.Create(uri);
             request.Method = method.ToString();
             request.ContentLength = 0;
-            request.Timeout = timeout;
+            request.Timeout = _timeout;
 
-            HttpWebResponse response;
             try
             {
-                response = (HttpWebResponse)request.GetResponse();
+                var response = (HttpWebResponse)request.GetResponse();
+                System.Diagnostics.Debug.WriteLine(response);
             }
             catch (WebException ex)
             {
-                this.GetDigestDataFromException(ex);
+                GetDigestDataFromException(ex);
             }
         }
 
@@ -165,13 +170,13 @@ namespace RestSharp.Authenticators.Digest
                 ex.Response.Headers["WWW-Authenticate"]
             );
 
-            this.cnonce = new Random()
+            _cnonce = new Random()
                 .Next(123400, 9999999)
                 .ToString(CultureInfo.InvariantCulture);
 
-            this.realm = wwwAuthenticateHeader.GetHeader(REALM);
-            this.nonce = wwwAuthenticateHeader.GetHeader(NONCE);
-            this.qop = wwwAuthenticateHeader.GetHeader(QOP);
+            _realm = wwwAuthenticateHeader.GetFirstHeader(DIGEST_REALM, REALM);
+            _nonce = wwwAuthenticateHeader.GetHeader(NONCE);
+            _qop = wwwAuthenticateHeader.GetHeader(QOP);
         }
 
         /// <summary>
@@ -193,7 +198,7 @@ namespace RestSharp.Authenticators.Digest
     /// <summary>
     /// Dictionary extension.
     /// </summary>
-    internal static class IDictionaryHeaderExtension
+    internal static class DictionaryHeaderExtension
     {
         internal static string GetHeader(this IDictionary<string, string> header, string key)
         {
@@ -202,7 +207,20 @@ namespace RestSharp.Authenticators.Digest
                 return value;
             }
 
-            throw new ApplicationException(string.Format("Header not found: {0}", key));
+            throw new ApplicationException($"Header not found: {key}");
+        }
+
+        internal static string GetFirstHeader(this IDictionary<string, string> header, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (header.TryGetValue(key, out var value))
+                {
+                    return value;
+                }
+            }
+
+            throw new ApplicationException($"No Headers found with following keys: {string.Join(",", keys)}");
         }
     }
 }

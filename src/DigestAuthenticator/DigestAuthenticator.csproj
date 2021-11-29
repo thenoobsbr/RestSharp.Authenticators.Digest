@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>RestSharp.Authenticators.Digest</AssemblyName>
@@ -29,6 +29,6 @@
     <PackageLicenseUrl>https://github.com/Alterdata/RestSharp.Authenticators.Digest/blob/master/LICENSE</PackageLicenseUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RestSharp" Version="106.6.10"/>
+    <PackageReference Include="RestSharp" Version="106.13.0" />
   </ItemGroup>
 </Project>
