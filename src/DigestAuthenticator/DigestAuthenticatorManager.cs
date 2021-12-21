@@ -1,88 +1,48 @@
-﻿namespace RestSharp.Authenticators.Digest
+﻿using System;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace RestSharp.Authenticators.Digest
 {
-    using System.Collections.Generic;
-    using System.Globalization;
-    using System.Linq;
-    using System.Net;
-    using System.Security.Cryptography;
-    using System.Text;
-    using System.Text.RegularExpressions;
-    using System;
-
-    using RestSharp;
-
     /// <summary>
-    /// DigestAuthenticatorManager class.
+    ///     DigestAuthenticatorManager class.
     /// </summary>
     internal class DigestAuthenticatorManager
     {
-        /// <summary>
-        /// Header Realm.
-        /// </summary>
-        private const string DIGEST_REALM = "Digest realm";
-
-        /// <summary>
-        /// Header Realm.
-        /// </summary>
-        private const string REALM = "realm";
-
-        /// <summary>
-        /// Header nonce.
-        /// </summary>
-        private const string NONCE = "nonce";
-
-        /// <summary>
-        /// Header qop.
-        /// </summary>
-        private const string QOP = "qop";
-
-        /// <summary>
-        /// The host.
-        /// </summary>
         private readonly Uri _host;
 
-        /// <summary>
-        /// The user.
-        /// </summary>
+        private readonly string _password;
+
+        private readonly int _timeout;
+
         private readonly string _username;
 
         /// <summary>
-        /// The password.
-        /// </summary>
-        private readonly string _password;
-
-        /// <summary>
-        /// The timeout.
-        /// </summary>
-        private readonly int _timeout;
-
-        /// <summary>
-        /// The Realm that is returned by the first digest request (without the data).
-        /// </summary>
-        private string _realm;
-
-        /// <summary>
-        /// The nonce that is returned by the first digest request (without the data).
-        /// </summary>
-        private string _nonce;
-
-        /// <summary>
-        /// The qop that is returned by the first digest request (without the data).
-        /// </summary>
-        private string _qop;
-
-        /// <summary>
-        /// The cnounce that is generated randomly by the application.
+        ///     The cnounce that is generated randomly by the application.
         /// </summary>
         private string _cnonce;
 
         /// <summary>
-        /// The nounce count (usually 000001)
+        ///     The nonce that is returned by the first digest request (without the data).
         /// </summary>
-        private const int NONCE_COUNT = 1;
+        private string _nonce;
 
         /// <summary>
-        /// Creates a new instance of <see cref="DigestAuthenticatorManager"/> class.
+        ///     The qop that is returned by the first digest request (without the data).
+        /// </summary>
+        private string _qop;
+
+        /// <summary>
+        ///     The Realm that is returned by the first digest request (without the data).
+        /// </summary>
+        private string _realm;
+
+        /// <summary>
+        ///     Creates a new instance of <see cref="DigestAuthenticatorManager" /> class.
         /// </summary>
         /// <param name="host">The host.</param>
         /// <param name="username">The username.</param>
@@ -97,7 +57,54 @@
         }
 
         /// <summary>
-        /// Generate the MD5 Hash.
+        ///     Gets the digest auth header.
+        /// </summary>
+        /// <param name="path">The request path.</param>
+        /// <param name="method">The request method.</param>
+        public void GetDigestAuthHeader(string path, Method method)
+        {
+            var uri = new Uri(_host, path);
+            var request = (HttpWebRequest) WebRequest.Create(uri);
+            request.Method = method.ToString();
+            request.ContentLength = 0;
+            request.Timeout = _timeout;
+
+            try
+            {
+                var response = (HttpWebResponse) request.GetResponse();
+                Debug.WriteLine(response);
+            }
+            catch (WebException ex)
+            {
+                GetDigestDataFromException(ex);
+            }
+        }
+
+        /// <summary>
+        ///     Gets the digest header.
+        /// </summary>
+        /// <param name="digestUri">The digest uri.</param>
+        /// <param name="method">The method.</param>
+        /// <returns>The digest header.</returns>
+        public string GetDigestHeader(string digestUri, Method method)
+        {
+            var hash1 = GenerateMD5($"{_username}:{_realm}:{_password}");
+            var hash2 = GenerateMD5($"{method}:{digestUri}");
+            var digestResponse =
+                GenerateMD5($"{hash1}:{_nonce}:{DigestHeader.NONCE_COUNT:00000000}:{_cnonce}:{_qop}:{hash2}");
+            return $"Digest username=\"{_username}\"," +
+                   $"realm=\"{_realm}\"," +
+                   $"nonce=\"{_nonce}\"," +
+                   $"uri=\"{digestUri}\"," +
+                   "algorithm=MD5," +
+                   $"response=\"{digestResponse}\"," +
+                   $"qop={_qop}," +
+                   $"nc={DigestHeader.NONCE_COUNT:00000000}," +
+                   $"cnonce=\"{_cnonce}\"";
+        }
+
+        /// <summary>
+        ///     Generate the MD5 Hash.
         /// </summary>
         /// <param name="input">The input.</param>
         /// <returns>The MD5.</returns>
@@ -110,152 +117,22 @@
             return stringBuilder.ToString();
         }
 
-        /// <summary>
-        /// Gets the digest header.
-        /// </summary>
-        /// <param name="digestUri">The digest uri.</param>
-        /// <param name="method">The method.</param>
-        /// <returns>The digest header.</returns>
-        public string GetDigestHeader(string digestUri, Method method)
-        {
-            var hash1 = GenerateMD5($"{_username}:{_realm}:{_password}");
-            var hash2 = GenerateMD5($"{method}:{digestUri}");
-            var digestResponse = GenerateMD5($"{hash1}:{_nonce}:{NONCE_COUNT:00000000}:{_cnonce}:{_qop}:{hash2}");
-            return $"Digest username=\"{_username}\"," +
-                $"realm=\"{_realm}\"," +
-                $"nonce=\"{_nonce}\"," +
-                $"uri=\"{digestUri}\"," +
-                "algorithm=MD5," +
-                $"response=\"{digestResponse}\"," +
-                $"qop={_qop}," +
-                $"nc={NONCE_COUNT:00000000}," +
-                $"cnonce=\"{_cnonce}\"";
-        }
-
-        /// <summary>
-        /// Gets the digest auth header.
-        /// </summary>
-        /// <param name="path">The request path.</param>
-        /// <param name="method">The request method.</param>
-        public void GetDigestAuthHeader(string path, Method method)
-        {
-            var uri = new Uri(_host, path);
-            var request = (HttpWebRequest)WebRequest.Create(uri);
-            request.Method = method.ToString();
-            request.ContentLength = 0;
-            request.Timeout = _timeout;
-
-            try
-            {
-                var response = (HttpWebResponse)request.GetResponse();
-                System.Diagnostics.Debug.WriteLine(response);
-            }
-            catch (WebException ex)
-            {
-                GetDigestDataFromException(ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets the digest data from exception.
-        /// </summary>
-        /// <param name="ex">The exception.</param>
         private void GetDigestDataFromException(WebException ex)
         {
-            if (ex.Response == null || ((HttpWebResponse)ex.Response).StatusCode != HttpStatusCode.Unauthorized)
+            if (ex.Response == null || ((HttpWebResponse) ex.Response).StatusCode != HttpStatusCode.Unauthorized)
             {
                 throw ex;
             }
 
-            var wwwAuthenticateHeader = TransformHeaderToDictionary(
-                ex.Response.Headers["WWW-Authenticate"]
-            );
+            var digestHeader = new DigestHeader(ex.Response.Headers["WWW-Authenticate"]);
 
             _cnonce = new Random()
                 .Next(123400, 9999999)
                 .ToString(CultureInfo.InvariantCulture);
 
-            _realm = wwwAuthenticateHeader.GetHeader(REALM);
-            _nonce = wwwAuthenticateHeader.GetHeader(NONCE);
-            _qop = wwwAuthenticateHeader.GetHeader(QOP);
-        }
-
-        /// <summary>
-        /// Transform the header to dictionary.
-        /// </summary>
-        /// <param name="wwwAuthenticateHeader">The header</param>
-        /// <returns>A instance of <see cref="IDictionary{K,V}"/>.</returns>
-        private static IDictionary<string, string> TransformHeaderToDictionary(string wwwAuthenticateHeader)
-        {
-            var regex = new Regex("realm=\"(?<realm>.*?)\"|qop=\"(?<qop>.*?)\"|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-            var matches = regex.Matches(wwwAuthenticateHeader);
-
-            var dict = new Dictionary<string, string>();
-
-            // There should be 6 matches
-            foreach (Match m in matches)
-            {
-                if (!m.Success)
-                {
-                    continue;
-                }
-
-                if (m.Groups[QOP].Success)
-                {
-                    dict.Add(QOP, m.Groups[QOP].Value);
-                }
-                if (m.Groups[REALM].Success)
-                {
-                    dict.Add(REALM, m.Groups[REALM].Value);
-                }
-                if (m.Groups[NONCE].Success)
-                {
-                    dict.Add(NONCE, m.Groups[NONCE].Value);
-                }
-                //if (m.Groups[STALE].Success)
-                //{
-                //    dict.Add(STALE, m.Groups[STALE].Value);
-                //}
-                //if (m.Groups[OPAQUE].Success)
-                //{
-                //    dict.Add(OPAQUE, m.Groups[OPAQUE].Value);
-                //}
-                //if (m.Groups[DOMAIN].Success)
-                //{
-                //    dict.Add(DOMAIN, m.Groups[DOMAIN].Value);
-                //}
-            }
-
-            return dict;
-        }
-    }
-
-    /// <summary>
-    /// Dictionary extension.
-    /// </summary>
-    internal static class DictionaryHeaderExtension
-    {
-        internal static string GetHeader(this IDictionary<string, string> header, string key)
-        {
-            if (header.TryGetValue(key, out var value))
-            {
-                return value;
-            }
-
-            throw new ApplicationException($"Header not found: {key}");
-        }
-
-        internal static string GetFirstHeader(this IDictionary<string, string> header, params string[] keys)
-        {
-            foreach (var key in keys)
-            {
-                if (header.TryGetValue(key, out var value))
-                {
-                    return value;
-                }
-            }
-
-            throw new ApplicationException($"No Headers found with following keys: {string.Join(",", keys)}");
+            _realm = digestHeader.Realm;
+            _nonce = digestHeader.Nonce;
+            _qop = digestHeader.Qop;
         }
     }
 }

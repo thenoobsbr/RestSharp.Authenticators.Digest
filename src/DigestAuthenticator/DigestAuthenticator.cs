@@ -1,52 +1,47 @@
+﻿using System.Net;
+
 namespace RestSharp.Authenticators.Digest
 {
-    using System.Net;
-
-    using RestSharp.Authenticators;
-    using RestSharp;
-
     /// <summary>
-    /// Digest midleware for <see cref="IRestClient"/>.
+    ///     Digest middleware for <see cref="IRestClient" />.
     /// </summary>
     public class DigestAuthenticator : IAuthenticator
     {
-        /// <summary>
-        /// The username.
-        /// </summary>
-        private readonly string username;
+        private const int DEFAULT_TIMEOUT = 100000;
+        private readonly string _password;
+
+        private readonly string _username;
 
         /// <summary>
-        /// The password.
-        /// </summary>
-        private readonly string password;
-
-
-        /// <summary>
-        /// The timeout.
-        /// </summary>
-        public int Timeout { get; set; } = 100000; //default WebRequest timeout
-
-        /// <summary>
-        /// Creates a new instance of <see cref="DigestAuthenticator"/> class.
+        ///     Creates a new instance of <see cref="DigestAuthenticator" /> class.
         /// </summary>
         /// <param name="username">The username.</param>
         /// <param name="password">The password.</param>
         public DigestAuthenticator(string username, string password)
         {
-            this.username = username;
-            this.password = password;
-        } 
+            _username = username;
+            _password = password;
+            Timeout = DEFAULT_TIMEOUT;
+        }
 
-        /// <inheritdoc cref="IAuthenticator" />.
+        /// <summary>
+        ///     The web request timeout (default 100000).
+        /// </summary>
+        public int Timeout { get; set; }
+
+        /// <inheritdoc cref="IAuthenticator" />
         public void Authenticate(IRestClient client, IRestRequest request)
         {
-            request.Credentials = new NetworkCredential(username, this.password); 
+            // TODO: We must check this to use the new way.
+#pragma warning disable CS0618
+            request.Credentials = new NetworkCredential(_username, _password);
+#pragma warning restore CS0618
 
             var uri = client.BuildUri(request);
-            var manager = new DigestAuthenticatorManager(client.BaseUrl, this.username, this.password, Timeout);
+            var manager = new DigestAuthenticatorManager(client.BaseUrl, _username, _password, Timeout);
             manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method);
             var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
             request.AddParameter("Authorization", digestHeader, ParameterType.HttpHeader);
         }
-    } 
+    }
 }
