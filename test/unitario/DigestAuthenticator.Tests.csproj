@@ -5,7 +5,6 @@
     <PackageId>RestSharp.Authenticators.Digest.Tests</PackageId>
     <RootNamespace>RestSharp.Authenticators.Digest.Tests</RootNamespace>
     <GenerateFullPaths>true</GenerateFullPaths>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -36,6 +35,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\DigestAuthenticator\DigestAuthenticator.csproj" />
