@@ -6,6 +6,7 @@
     using System.Net;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System;
 
     using RestSharp;
@@ -174,7 +175,7 @@
                 .Next(123400, 9999999)
                 .ToString(CultureInfo.InvariantCulture);
 
-            _realm = wwwAuthenticateHeader.GetFirstHeader(DIGEST_REALM, REALM);
+            _realm = wwwAuthenticateHeader.GetHeader(REALM);
             _nonce = wwwAuthenticateHeader.GetHeader(NONCE);
             _qop = wwwAuthenticateHeader.GetHeader(QOP);
         }
@@ -186,12 +187,46 @@
         /// <returns>A instance of <see cref="IDictionary{K,V}"/>.</returns>
         private static IDictionary<string, string> TransformHeaderToDictionary(string wwwAuthenticateHeader)
         {
-            return wwwAuthenticateHeader
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(part => part.Split('='))
-                .ToDictionary(
-                    split => split[0].Trim(),
-                    split => split[1].Replace('"', ' ').Trim());
+            var regex = new Regex("realm=\"(?<realm>.*?)\"|qop=\"(?<qop>.*?)\"|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            var matches = regex.Matches(wwwAuthenticateHeader);
+
+            var dict = new Dictionary<string, string>();
+
+            // There should be 6 matches
+            foreach (Match m in matches)
+            {
+                if (!m.Success)
+                {
+                    continue;
+                }
+
+                if (m.Groups[QOP].Success)
+                {
+                    dict.Add(QOP, m.Groups[QOP].Value);
+                }
+                if (m.Groups[REALM].Success)
+                {
+                    dict.Add(REALM, m.Groups[REALM].Value);
+                }
+                if (m.Groups[NONCE].Success)
+                {
+                    dict.Add(NONCE, m.Groups[NONCE].Value);
+                }
+                //if (m.Groups[STALE].Success)
+                //{
+                //    dict.Add(STALE, m.Groups[STALE].Value);
+                //}
+                //if (m.Groups[OPAQUE].Success)
+                //{
+                //    dict.Add(OPAQUE, m.Groups[OPAQUE].Value);
+                //}
+                //if (m.Groups[DOMAIN].Success)
+                //{
+                //    dict.Add(DOMAIN, m.Groups[DOMAIN].Value);
+                //}
+            }
+
+            return dict;
         }
     }
 
