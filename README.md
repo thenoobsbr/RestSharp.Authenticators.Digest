@@ -1,6 +1,10 @@
 # RestSharp.DigestAuthenticator
 Extends RestSharp features for digest authentication
 
+[![nuget](https://buildstats.info/nuget/RestSharp.Authenticators.Digest)](http://www.nuget.org/packages/RestSharp.Authenticators.Digest)
+![license](https://img.shields.io/github/license/bernardbr/RestSharp.Authenticators.Digest)
+
+
 ## Examples
 ```CSharp
 namespace Example
