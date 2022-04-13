@@ -79,7 +79,7 @@ internal class DigestAuthenticatorManager
         request.AddOrUpdateHeader("Accept-Encoding", "gzip, deflate, br");
         request.Timeout = _timeout;
         using var client = new RestClient();
-        var response = await client.ExecuteAsync(request);
+        var response = await client.ExecuteAsync(request).ConfigureAwait(false);
         GetDigestDataFromFailResponse(response);
     }
 
