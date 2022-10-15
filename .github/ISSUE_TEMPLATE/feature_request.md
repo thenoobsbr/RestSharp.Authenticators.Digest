@@ -7,11 +7,10 @@ assignees: ''
 
 ---
 
-
 **NOTE**: _If the current behavior is a bug, please use the bug report template._
 
 - **Is your feature request related to a problem? Please describe.**
- 
+
   A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
 - **What is the expected behavior?**
@@ -20,10 +19,9 @@ assignees: ''
 
 - **Please tell us about your environment:**
 
-  - Version: 
-  - Platform:
-  - Framework: 
-
+  - Version: `1.0.0`
+  - Platform: `Linux`
+  - Framework: `netcoreapp3.1`
 
 - **Other information**
 

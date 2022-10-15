@@ -38,7 +38,7 @@ Here you can describe better all the new tests.
 
 Add additional pieces of information like screenshots, issue links, etc.
 
-### Definition of Done:
+### Definition of Done
 
 - [ ] My code follows the style guidelines of this project
 - [ ] I have performed a self-review of my own code
