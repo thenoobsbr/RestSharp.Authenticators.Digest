@@ -27,6 +27,6 @@
     <PackageLicenseUrl>https://github.com/bernardbr/RestSharp.Authenticators.Digest/blob/master/LICENSE</PackageLicenseUrl>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RestSharp" Version="107.1.2" />
+    <PackageReference Include="RestSharp" Version="110.2.0" />
   </ItemGroup>
 </Project>

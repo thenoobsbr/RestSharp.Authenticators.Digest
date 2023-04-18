@@ -18,10 +18,12 @@ public class DigestIntegrationTest
     {
         Skip.IfNot(Debugger.IsAttached);
 
-        var client = new RestClient("http://localhost:46551/api")
+        var options = new RestClientOptions("http://localhost:46551/api")
         {
             Authenticator = new DigestAuthenticator("eddie", "starwars123")
         };
+
+        var client = new RestClient(options);
 
         var request = new RestRequest("values");
         request.AddHeader("Content-Type", "application/json");
