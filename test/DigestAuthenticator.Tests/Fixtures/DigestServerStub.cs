@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
 
@@ -14,29 +15,31 @@ public class DigestServerStub : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly Task _serverTask;
+    
+    private const string REALM = "test-realm";
+    private const string USERNAME = "test-user";
+    private const string PASSWORD = "test-password";
+    private const int PORT = 8080;
 
     public DigestServerStub()
     {
-        const string REALM = "test-realm";
-        const string USERNAME = "test-user";
-        const string PASSWORD = "test-password";
-        const int PORT = 8080;
         var nonce = GenerateNonce();
 
         _cancellationTokenSource = new CancellationTokenSource();
-
-        var restOptions = new RestClientOptions($"http://localhost:{PORT}")
-        {
-            Authenticator = new DigestAuthenticator(USERNAME, PASSWORD)
-        };
         
-        Client = new RestClient(restOptions);
-
         _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
         Console.WriteLine($"Server started! port: {PORT}.");
     }
 
-    public RestClient Client { get; }
+    public IRestClient CreateClient(ILogger logger)
+    {
+        var restOptions = new RestClientOptions($"http://localhost:{PORT}")
+        {
+            Authenticator = new DigestAuthenticator(USERNAME, PASSWORD, logger: logger)
+        };
+
+        return new RestClient(restOptions);
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -44,7 +47,6 @@ public class DigestServerStub : IAsyncDisposable
         Console.WriteLine("Shutting down the server...");
         _cancellationTokenSource.Cancel();
         await _serverTask;
-        Client.Dispose();
     }
 
     private static string CalculateMD5Hash(string input)

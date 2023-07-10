@@ -1,6 +1,8 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using RestSharp.Authenticators.Digest.Tests.Fixtures;
 using Xunit;
 
@@ -23,13 +25,16 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
     [Fact]
     public async Task Given_ADigestAuthEndpoint_When_ITryToGetInfo_Then_TheAuthMustBeResolved()
     {
-        var client = _fixture.Client;
+        var loggerMock = Substitute.For<ILogger>();
+        loggerMock.BeginScope("DigestServerStub");
 
         var request = new RestRequest("values");
         request.AddHeader("Content-Type", "application/json");
 
+        var client = _fixture.CreateClient(loggerMock);
         var response = await client.ExecuteAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        loggerMock.ReceivedWithAnyArgs().LogDebug("NONONO");
     }
 }
