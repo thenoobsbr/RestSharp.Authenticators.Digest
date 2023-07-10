@@ -11,10 +11,10 @@
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
   </PropertyGroup>
   <PropertyGroup>
     <NeutralLanguage>en-US</NeutralLanguage>
@@ -24,8 +24,12 @@
     </Description>
     <RepositoryType>GIT</RepositoryType>
     <RepositoryURL>https://github.com/bernardbr/RestSharp.Authenticators.Digest</RepositoryURL>
-    <PackageLicenseUrl>https://github.com/bernardbr/RestSharp.Authenticators.Digest/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicense>https://github.com/bernardbr/RestSharp.Authenticators.Digest/blob/master/LICENSE</PackageLicense>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="RestSharp" Version="110.2.0" />
   </ItemGroup>
