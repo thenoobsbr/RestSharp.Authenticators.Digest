@@ -13,12 +13,15 @@ public class DigestHeader
 
     public const string REALM = "realm";
 
+    public const string REGEX_PATTERN =
+        "realm=\"(?<realm>.*?)\"|qop=(?:\"(?<qop>.*?)\"|(?<qop>[^\",\\s]+))|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"";
+
     private static readonly Regex _regex;
 
     static DigestHeader()
     {
         _regex = new Regex(
-            "realm=\"(?<realm>.*?)\"|qop=\"(?<qop>.*?)\"|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"",
+            REGEX_PATTERN,
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
     }
 
