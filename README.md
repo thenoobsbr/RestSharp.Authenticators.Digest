@@ -2,7 +2,7 @@
 Extends RestSharp features for digest authentication
 
 [![nuget](https://buildstats.info/nuget/RestSharp.Authenticators.Digest)](http://www.nuget.org/packages/RestSharp.Authenticators.Digest)
-![license](https://img.shields.io/github/license/bernardbr/RestSharp.Authenticators.Digest)
+![license](https://img.shields.io/github/license/thenoobsbr/RestSharp.Authenticators.Digest)
 
 
 ## Examples
@@ -17,8 +17,12 @@ namespace Example
     {
         public static void Main(string[] args)
         {
-            var client = new RestClient("http://api.myhost.com/api/v1");
-            client.Authenticator = new DigestAuthenticator("user", "password");
+            var restOptions = new RestClientOptions("https://api.myhost.com/api/v1")
+            {
+                Authenticator = new DigestAuthenticator(USERNAME, PASSWORD)
+            };
+            
+            var client = new RestClient(restOptions);        
             var request = new RestRequest("values", Method.GET);
             request.AddHeader("Content-Type", "application/json");
 
