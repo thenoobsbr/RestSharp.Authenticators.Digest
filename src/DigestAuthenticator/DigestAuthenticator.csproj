@@ -18,17 +18,25 @@
   </PropertyGroup>
   <PropertyGroup>
     <NeutralLanguage>en-US</NeutralLanguage>
+    <Authors>The Noobs</Authors>
     <AssemblyTitle>RestSharp.Authenticators.Digest</AssemblyTitle>
     <Description>
       Library that allows Digest authentication with RestSharp.
     </Description>
     <RepositoryType>GIT</RepositoryType>
     <RepositoryURL>https://github.com/bernardbr/RestSharp.Authenticators.Digest</RepositoryURL>
-    <PackageLicense>https://github.com/bernardbr/RestSharp.Authenticators.Digest/blob/master/LICENSE</PackageLicense>
+    <PackageProjectUrl>https://github.com/bernardbr/RestSharp.Authenticators.Digest</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>RELEASE.md</PackageReleaseNotes>
+    <PackageTags>Restsharp,Digest,Auth</PackageTags>
+    <Copyright>The Noobs</Copyright>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\RELEASES.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="RestSharp" Version="110.2.0" />
