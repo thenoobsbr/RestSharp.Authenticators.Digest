@@ -1,121 +1,153 @@
 ﻿using System;
-using System.Net.Http;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
 
 namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
 
-public class DigestIntegrationTestFixture: IClassFixture<TestServerFixture>
+public class DigestServerStub : IAsyncDisposable
+{
+    private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly Task _serverTask;
+
+    public DigestServerStub()
     {
-        private readonly TestServerFixture _fixture;
+        const string REALM = "test-realm";
+        const string USERNAME = "test-user";
+        const string PASSWORD = "test-password";
+        const int PORT = 8080;
+        var nonce = GenerateNonce();
 
-        public DigestIntegrationTestFixture(TestServerFixture fixture)
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        Client = new RestClient($"http://localhost:{PORT}")
         {
-            _fixture = fixture;
-        }
+            Authenticator = new DigestAuthenticator(USERNAME, PASSWORD)
+        };
 
-        [Fact]
-        public async Task Should_ReturnSuccessfulResponse_When_Authenticated()
-        {
-            // Arrange
-            HttpClient client = _fixture.Client;
-            string username = "test-user";
-            string password = "test-password";
-            string realm = "test-realm";
-
-            // Act
-            HttpResponseMessage response = await client.GetAsync($"/api/endpoint"); // Altere a rota conforme necessário
-            string responseContent = await response.Content.ReadAsStringAsync();
-
-            // Assert
-            Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal("Hello, world!", responseContent);
-        }
+        _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
+        Console.WriteLine($"Server started! port: {PORT}.");
     }
 
-    public class TestServerFixture : IDisposable
+    public RestClient Client { get; }
+
+    public async ValueTask DisposeAsync()
     {
-        private readonly System.Threading.Thread _serverThread;
-        public HttpClient Client { get; }
+        GC.SuppressFinalize(this);
+        Console.WriteLine("Shutting down the server...");
+        _cancellationTokenSource.Cancel();
+        await _serverTask;
+        Client.Dispose();
+    }
 
-        public TestServerFixture()
+    private static string CalculateMD5Hash(string input)
+    {
+        var inputBytes = Encoding.ASCII.GetBytes(input);
+        var hash = MD5.Create().ComputeHash(inputBytes);
+        var stringBuilder = new StringBuilder();
+        hash.ToList().ForEach(b => stringBuilder.Append(b.ToString("x2")));
+        return stringBuilder.ToString();
+    }
+
+    private static string GenerateNonce()
+    {
+        var nonceBytes = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
         {
-            // Configuração do servidor de teste
-            string realm = "test-realm";
-            string username = "test-user";
-            string password = "test-password";
-            string nonce = GenerateNonce();
-            int port = 8080;
+            rng.GetBytes(nonceBytes);
+        }
 
-            // Inicia o servidor em um thread separado
-            _serverThread = new System.Threading.Thread(() =>
+        return Convert.ToBase64String(nonceBytes);
+    }
+
+    private static bool IsDigestAuthenticated(HttpListenerRequest request, string realm, string username, string password, string nonce)
+    {
+        var authorizationHeader = request.Headers["Authorization"];
+
+        if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Digest"))
+        {
+            return false;
+        }
+
+        var matches = Regex.Matches(authorizationHeader, @"(\w+)=""?([^"",\s]+)""?");
+        var authValues = new Dictionary<string, string>();
+        foreach (Match match in matches)
+        {
+            authValues[match.Groups[1].Value] = match.Groups[2].Value;
+        }
+
+        if (!authValues.TryGetValue("username", out var receivedUsername) ||
+            !authValues.TryGetValue("realm", out var receivedRealm) ||
+            !authValues.TryGetValue("nonce", out var receivedNonce) ||
+            !authValues.TryGetValue("cnonce", out var receivedCNonce) ||
+            !authValues.TryGetValue("qop", out var receivedQop) ||
+            !authValues.TryGetValue("uri", out var uri) ||
+            !authValues.TryGetValue("response", out var receivedResponse))
+        {
+            return false;
+        }
+
+        if (realm != receivedRealm || nonce != receivedNonce || username != receivedUsername)
+        {
+            return false;
+        }
+
+        var hash1 = CalculateMD5Hash($"{username}:{realm}:{password}");
+        var hash2 = CalculateMD5Hash($"{request.HttpMethod.ToUpperInvariant()}:{uri}");
+
+        var expectedResponse =
+            CalculateMD5Hash($"{hash1}:{receivedNonce}:{DigestHeader.NONCE_COUNT:00000000}:{receivedCNonce}:{receivedQop}:{hash2}");
+
+        return expectedResponse == receivedResponse;
+    }
+
+    private static void SendDigestAuthenticationChallenge(HttpListenerResponse response, string realm, string nonce)
+    {
+        response.StatusCode = 401;
+        response.Headers.Add("WWW-Authenticate", $"Digest realm=\"{realm}\", nonce=\"{nonce}\", qop=\"auth\"");
+        response.OutputStream.Close();
+    }
+
+    private async Task StartServer(string realm, string username, string password, string nonce, int port)
+    {
+        using var listener = new HttpListener();
+        listener.Prefixes.Add($"http://localhost:{port}/");
+        listener.Start();
+
+        while (!_cancellationTokenSource.Token.IsCancellationRequested)
+        {
+            try
             {
-                using (var listener = new System.Net.HttpListener())
+                var context = await listener.GetContextAsync();
+                var request = context.Request;
+                var response = context.Response;
+
+                if (!IsDigestAuthenticated(request, realm, username, password, nonce))
                 {
-                    listener.Prefixes.Add($"http://localhost:{port}/");
-                    listener.Start();
-
-                    while (true)
-                    {
-                        var context = listener.GetContext();
-                        var request = context.Request;
-                        var response = context.Response;
-
-                        // Verifica a autenticação Digest
-                        if (!IsDigestAuthenticated(request, realm, username, password, nonce))
-                        {
-                            SendDigestAuthenticationChallenge(response, realm, nonce);
-                            continue;
-                        }
-
-                        // Autenticação bem-sucedida, processa a requisição
-                        var responseData = "Hello, world!";
-                        var buffer = System.Text.Encoding.UTF8.GetBytes(responseData);
-
-                        response.ContentType = "text/plain";
-                        response.ContentLength64 = buffer.Length;
-                        response.OutputStream.Write(buffer, 0, buffer.Length);
-                        response.OutputStream.Close();
-                    }
+                    SendDigestAuthenticationChallenge(response, realm, nonce);
+                    continue;
                 }
-            });
 
-            // Inicia o servidor em uma nova thread
-            _serverThread.Start();
-            Console.WriteLine("Servidor iniciado.");
+                const string RESPONSE_DATA = "Successful authentication!";
+                var buffer = Encoding.UTF8.GetBytes(RESPONSE_DATA);
 
-            // Inicializa o cliente HTTP para fazer as chamadas de teste
-            Client = new HttpClient { BaseAddress = new Uri($"http://localhost:{port}") };
+                response.ContentType = "text/plain";
+                response.ContentLength64 = buffer.Length;
+                response.StatusCode = 200;
+                await response.OutputStream.WriteAsync(buffer);
+                response.OutputStream.Close();
+            }
+            catch (HttpListenerException)
+            {
+                // Ignoring an exception that occurred due to server shutdown
+            }
         }
 
-        public void Dispose()
-        {
-            // Encerra o servidor de teste
-            Console.WriteLine("Encerrando o servidor...");
-            _serverThread.Abort();
-            Client.Dispose();
-        }
-
-        // Métodos auxiliares de autenticação e geração de nonce
-        private bool IsDigestAuthenticated(System.Net.HttpListenerRequest request, string realm, string username, string password, string nonce)
-        {
-            // Implementação do método de autenticação Digest
-            // ...
-
-            return true; // Altere a implementação de acordo com as suas regras de autenticação
-        }
-
-        private void SendDigestAuthenticationChallenge(System.Net.HttpListenerResponse response, string realm, string nonce)
-        {
-            // Implementação do envio do desafio de autenticação Digest
-            // ...
-        }
-
-        private string GenerateNonce()
-        {
-            // Implementação da geração de nonce
-            // ...
-
-            return "generated-nonce"; // Altere a implementação de acordo com a sua geração de nonce
-        }
+        listener.Stop();
     }
+}

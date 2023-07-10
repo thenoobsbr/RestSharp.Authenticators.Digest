@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using RestSharp.Authenticators.Digest.Tests.Fixtures;
 using Xunit;
 
 namespace RestSharp.Authenticators.Digest.Tests;
@@ -11,17 +11,19 @@ namespace RestSharp.Authenticators.Digest.Tests;
 /// </summary>
 [Trait("Category", "IntegrationTests")]
 [Trait("Class", nameof(DigestAuthenticator))]
-public class DigestIntegrationTest
+public class DigestIntegrationTest : IClassFixture<DigestServerStub>
 {
-    [SkippableFact]
+    private readonly DigestServerStub _fixture;
+
+    public DigestIntegrationTest(DigestServerStub fixture)
+    {
+        _fixture = fixture;
+    }
+
+    [Fact]
     public async Task Given_ADigestAuthEndpoint_When_ITryToGetInfo_Then_TheAuthMustBeResolved()
     {
-        Skip.IfNot(Debugger.IsAttached);
-
-        var client = new RestClient("http://localhost:46551/api")
-        {
-            Authenticator = new DigestAuthenticator("eddie", "starwars123")
-        };
+        var client = _fixture.Client;
 
         var request = new RestRequest("values");
         request.AddHeader("Content-Type", "application/json");
