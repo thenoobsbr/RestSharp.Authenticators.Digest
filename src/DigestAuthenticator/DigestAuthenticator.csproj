@@ -7,14 +7,15 @@
     <GenerateFullPaths>true</GenerateFullPaths>
     <OutputType>Library</OutputType>
     <IsPackable>true</IsPackable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.4.0</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
   <PropertyGroup>
     <NeutralLanguage>en-US</NeutralLanguage>
@@ -28,10 +29,11 @@
     <PackageProjectUrl>https://github.com/bernardbr/RestSharp.Authenticators.Digest</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>RELEASE.md</PackageReleaseNotes>
     <PackageTags>Restsharp,Digest,Auth</PackageTags>
     <Copyright>The Noobs</Copyright>
     <PackageIcon>icon.png</PackageIcon>
+    <ReleaseNotesFilePath>$(MSBuildThisFileDirectory)..\..\RELEASES.md</ReleaseNotesFilePath>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(ReleaseNotesFilePath)'))</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
@@ -39,6 +41,12 @@
     <None Include="..\..\images\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).Tests</_Parameter1> <!-- We use the value of AssemblyName to declare the value of the attribute -->
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.32" />
     <PackageReference Include="RestSharp" Version="110.2.0" />
   </ItemGroup>
 </Project>
