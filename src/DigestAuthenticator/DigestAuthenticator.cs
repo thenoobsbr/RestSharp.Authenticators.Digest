@@ -30,7 +30,7 @@ public class DigestAuthenticator : IAuthenticator
     public int Timeout { get; set; }
 
     /// <inheritdoc cref="IAuthenticator" />
-    public async ValueTask Authenticate(RestClient client, RestRequest request)
+    public async ValueTask Authenticate(IRestClient client, RestRequest request)
     {
         var uri = client.BuildUri(request);
         var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, Timeout);

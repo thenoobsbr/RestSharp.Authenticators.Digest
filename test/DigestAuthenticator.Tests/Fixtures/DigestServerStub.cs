@@ -25,10 +25,12 @@ public class DigestServerStub : IAsyncDisposable
 
         _cancellationTokenSource = new CancellationTokenSource();
 
-        Client = new RestClient($"http://localhost:{PORT}")
+        var restOptions = new RestClientOptions($"http://localhost:{PORT}")
         {
             Authenticator = new DigestAuthenticator(USERNAME, PASSWORD)
         };
+        
+        Client = new RestClient(restOptions);
 
         _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
         Console.WriteLine($"Server started! port: {PORT}.");
