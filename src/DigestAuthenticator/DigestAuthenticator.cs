@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace RestSharp.Authenticators.Digest;
 
@@ -9,34 +12,51 @@ public class DigestAuthenticator : IAuthenticator
 {
     private const int DEFAULT_TIMEOUT = 100000;
     private readonly string _password;
+    private readonly ILogger _logger;
 
     private readonly string _username;
+    private readonly int _timeout;
 
     /// <summary>
     ///     Creates a new instance of <see cref="DigestAuthenticator" /> class.
     /// </summary>
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
-    public DigestAuthenticator(string username, string password)
+    /// <param name="logger">The optional logger.</param>
+    /// <param name="timeout">The request timeout.</param>
+    public DigestAuthenticator(string username, string password, int timeout = DEFAULT_TIMEOUT, ILogger? logger = null)
     {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(username));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(password));
+        }
+        
+        if (timeout <= 0)
+        {
+            throw new ArgumentException("Value cannot be less than or equal to zero.", nameof(timeout));
+        }
+
         _username = username;
         _password = password;
-        Timeout = DEFAULT_TIMEOUT;
+        _timeout = timeout;
+        _logger = logger ?? NullLogger.Instance;
     }
-
-    /// <summary>
-    ///     The web request timeout (default 100000).
-    /// </summary>
-    public int Timeout { get; set; }
 
     /// <inheritdoc cref="IAuthenticator" />
     public async ValueTask Authenticate(IRestClient client, RestRequest request)
     {
+        _logger.LogDebug("Initiate Digest authentication");
         var uri = client.BuildUri(request);
-        var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, Timeout);
+        var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, _timeout, _logger);
         await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method).ConfigureAwait(false);
         var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
         request.AddOrUpdateHeader("Connection", "Keep-Alive");
         request.AddOrUpdateHeader(KnownHeaders.Authorization, digestHeader);
+        _logger.LogDebug("Digest authentication completed");
     }
 }

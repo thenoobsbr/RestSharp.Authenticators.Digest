@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 namespace RestSharp.Authenticators.Digest;
 
-public class DigestHeader
+internal class DigestHeader
 {
     public const string NONCE = "nonce";
 
@@ -25,7 +26,7 @@ public class DigestHeader
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
     }
 
-    public DigestHeader(string authenticateHeader)
+    public DigestHeader(string authenticateHeader, ILogger logger)
     {
         var matches = _regex.Matches(authenticateHeader);
         foreach (Match m in matches)
@@ -51,16 +52,19 @@ public class DigestHeader
             }
         }
 
-        if (!AllDataCorrectFilled())
+        if (AllDataCorrectFilled())
         {
-            throw new ArgumentException(
-                $"Cannot load all required data from {nameof(authenticateHeader)}. Data: {this}");
+            return;
         }
+
+        logger.LogError("Cannot load all required data from {AuthenticateHeaderName}. Data: {AuthenticateHeader}", nameof(authenticateHeader), authenticateHeader);
+        throw new ArgumentException(
+            $"Cannot load all required data from {nameof(authenticateHeader)}. Data: {authenticateHeader}");
     }
 
-    public string Nonce { get; }
-    public string Qop { get; }
-    public string Realm { get; }
+    public string? Nonce { get; }
+    public string? Qop { get; }
+    public string? Realm { get; }
 
     public override string ToString()
     {

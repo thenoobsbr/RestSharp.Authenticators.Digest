@@ -3,9 +3,11 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace RestSharp.Authenticators.Digest;
 
@@ -21,28 +23,29 @@ internal class DigestAuthenticatorManager
     private readonly string _password;
 
     private readonly int _timeout;
+    private readonly ILogger _logger;
 
     private readonly string _username;
 
     /// <summary>
-    ///     The cnounce that is generated randomly by the application.
+    ///     The cnonce that is generated randomly by the application.
     /// </summary>
-    private string _cnonce;
+    private string? _cnonce;
 
     /// <summary>
     ///     The nonce that is returned by the first digest request (without the data).
     /// </summary>
-    private string _nonce;
+    private string? _nonce;
 
     /// <summary>
     ///     The qop that is returned by the first digest request (without the data).
     /// </summary>
-    private string _qop;
+    private string? _qop;
 
     /// <summary>
     ///     The Realm that is returned by the first digest request (without the data).
     /// </summary>
-    private string _realm;
+    private string? _realm;
 
     static DigestAuthenticatorManager()
     {
@@ -56,12 +59,29 @@ internal class DigestAuthenticatorManager
     /// <param name="username">The username.</param>
     /// <param name="password">The password.</param>
     /// <param name="timeout">The timeout.</param>
-    public DigestAuthenticatorManager(Uri host, string username, string password, int timeout)
+    /// <param name="logger"></param>
+    public DigestAuthenticatorManager(Uri host, string username, string password, int timeout, ILogger logger)
     {
-        _host = host;
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(username));
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(password));
+        }
+
+        if (timeout <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+        }
+
+        _host = host ?? throw new ArgumentNullException(nameof(host));
         _username = username;
         _password = password;
         _timeout = timeout;
+        _logger = logger;
     }
 
     /// <summary>
@@ -71,6 +91,7 @@ internal class DigestAuthenticatorManager
     /// <param name="method">The request method.</param>
     public async Task GetDigestAuthHeader(string path, Method method)
     {
+        _logger.LogDebug("Initiating GetDigestAuthHeader");
         var uri = new Uri(_host, path);
         var request = new RestRequest(uri, method);
         request.AddOrUpdateHeader("Connection", "Keep-Alive");
@@ -81,6 +102,7 @@ internal class DigestAuthenticatorManager
         using var client = new RestClient();
         var response = await client.ExecuteAsync(request).ConfigureAwait(false);
         GetDigestDataFromFailResponse(response);
+        _logger.LogDebug("GetDigestAuthHeader completed");
     }
 
     /// <summary>
@@ -124,11 +146,13 @@ internal class DigestAuthenticatorManager
     {
         if (response.IsSuccessful)
         {
+            _logger.LogInformation("Request is already authenticated");
             return;
         }
 
         if (response is not { StatusCode: HttpStatusCode.Unauthorized })
         {
+            _logger.LogWarning("Response status code not supported for fail authentication. {StatusCode}", response.StatusCode);
             throw new Exception(response.ErrorMessage);
         }
 
@@ -138,7 +162,13 @@ internal class DigestAuthenticatorManager
             .Value?
             .ToString();
 
-        var digestHeader = new DigestHeader(header);
+        if (string.IsNullOrWhiteSpace(header))
+        {
+            _logger.LogError("Any WWW-Authenticate header is not found");
+            throw new AuthenticationException("WWW-Authenticate header is empty.");
+        }
+
+        var digestHeader = new DigestHeader(header!, _logger);
 
         _cnonce = new Random()
             .Next(123400, 9999999)
