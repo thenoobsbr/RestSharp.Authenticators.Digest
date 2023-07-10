@@ -127,7 +127,7 @@ internal class DigestAuthenticatorManager
             return;
         }
 
-        if (response is not {StatusCode: HttpStatusCode.Unauthorized})
+        if (response is not { StatusCode: HttpStatusCode.Unauthorized })
         {
             throw new Exception(response.ErrorMessage);
         }
