@@ -89,7 +89,11 @@ internal class DigestAuthenticatorManager
     /// </summary>
     /// <param name="path">The request path.</param>
     /// <param name="method">The request method.</param>
-    public async Task GetDigestAuthHeader(string path, Method method)
+    /// <param name="proxy">The request proxy.</param>
+    public async Task GetDigestAuthHeader(
+        string path,
+        Method method,
+        IWebProxy? proxy = default)
     {
         _logger.LogDebug("Initiating GetDigestAuthHeader");
         var uri = new Uri(_host, path);
@@ -99,7 +103,10 @@ internal class DigestAuthenticatorManager
         request.AddOrUpdateHeader("User-Agent", $"RestSharp.Authenticators.Digest/{_assemblyVersion}");
         request.AddOrUpdateHeader("Accept-Encoding", "gzip, deflate, br");
         request.Timeout = _timeout;
-        using var client = new RestClient();
+        using var client = new RestClient(new RestClientOptions()
+        {
+            Proxy = proxy
+        });
         var response = await client.ExecuteAsync(request).ConfigureAwait(false);
         GetDigestDataFromFailResponse(response);
         _logger.LogDebug("GetDigestAuthHeader completed");
