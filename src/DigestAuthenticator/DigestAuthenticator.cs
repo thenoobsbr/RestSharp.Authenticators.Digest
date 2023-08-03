@@ -53,7 +53,7 @@ public class DigestAuthenticator : IAuthenticator
         _logger.LogDebug("Initiate Digest authentication");
         var uri = client.BuildUri(request);
         var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, _timeout, _logger);
-        await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method).ConfigureAwait(false);
+        await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method,client.Options.Proxy).ConfigureAwait(false);
         var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
         request.AddOrUpdateHeader("Connection", "Keep-Alive");
         request.AddOrUpdateHeader(KnownHeaders.Authorization, digestHeader);
