@@ -11,3 +11,7 @@
 - Adjusts the nuget package; 
 - Adds optional ILogger to the DigestAuthenticator constructor;
 - Adds optional request timeout to the DigestAuthenticator constructor;
+
+## v1.6.0
+
+- GetDigestAuthHeader should inherit proxy;
