@@ -15,3 +15,7 @@
 ## v1.6.0
 
 - GetDigestAuthHeader should inherit proxy;
+
+## v2.0.0
+
+- Changes the compatibility to the RestSharp version `111.2.0` or greater. 
