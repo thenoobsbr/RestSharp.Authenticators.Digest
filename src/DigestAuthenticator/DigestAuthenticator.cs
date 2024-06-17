@@ -15,7 +15,7 @@ public class DigestAuthenticator : IAuthenticator
     private readonly ILogger _logger;
 
     private readonly string _username;
-    private readonly int _timeout;
+    private readonly TimeSpan _timeout;
 
     /// <summary>
     ///     Creates a new instance of <see cref="DigestAuthenticator" /> class.
@@ -43,7 +43,7 @@ public class DigestAuthenticator : IAuthenticator
 
         _username = username;
         _password = password;
-        _timeout = timeout;
+        _timeout = TimeSpan.FromMilliseconds(timeout);
         _logger = logger ?? NullLogger.Instance;
     }
 

@@ -22,7 +22,7 @@ internal class DigestAuthenticatorManager
 
     private readonly string _password;
 
-    private readonly int _timeout;
+    private readonly TimeSpan _timeout;
     private readonly ILogger _logger;
 
     private readonly string _username;
@@ -60,7 +60,7 @@ internal class DigestAuthenticatorManager
     /// <param name="password">The password.</param>
     /// <param name="timeout">The timeout.</param>
     /// <param name="logger"></param>
-    public DigestAuthenticatorManager(Uri host, string username, string password, int timeout, ILogger logger)
+    public DigestAuthenticatorManager(Uri host, string username, string password, TimeSpan timeout, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -72,7 +72,7 @@ internal class DigestAuthenticatorManager
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(password));
         }
 
-        if (timeout <= 0)
+        if (timeout.Ticks <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout));
         }
