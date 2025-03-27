@@ -42,6 +42,8 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
     [Fact]
     public async Task Given_ADigestAuthEndpoint_When_ITryToInjectOwnClient_Then_TheAuthMustBeResolved()
     {
+        bool proxyCalled = false;
+
         var loggerMock = Substitute.For<ILogger>();
         loggerMock.BeginScope("DigestServerStub");
 
@@ -50,7 +52,7 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
 
         RestClientOptions options = new RestClientOptions()
         {
-            MaxRedirects = 2
+            Proxy = new TestProxy(() => proxyCalled = true)
         };
 
         var client = _fixture.CreateInjectedOptionClient(loggerMock, options);
@@ -58,5 +60,8 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         loggerMock.ReceivedWithAnyArgs().LogDebug("NONONO");
+
+        Assert.True(proxyCalled, "Injected RestClientOptions.Proxy should be used in digest handshake.");
+
     }
 }
