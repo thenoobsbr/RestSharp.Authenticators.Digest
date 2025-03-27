@@ -15,7 +15,7 @@ public class DigestServerStub : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly Task _serverTask;
-    
+
     private const string REALM = "test-realm";
     private const string USERNAME = "test-user";
     private const string PASSWORD = "test-password";
@@ -26,7 +26,7 @@ public class DigestServerStub : IAsyncDisposable
         var nonce = GenerateNonce();
 
         _cancellationTokenSource = new CancellationTokenSource();
-        
+
         _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
         Console.WriteLine($"Server started! port: {PORT}.");
     }
@@ -36,6 +36,17 @@ public class DigestServerStub : IAsyncDisposable
         var restOptions = new RestClientOptions($"http://localhost:{PORT}")
         {
             Authenticator = new DigestAuthenticator(USERNAME, PASSWORD, logger: logger)
+        };
+
+        return new RestClient(restOptions);
+    }
+
+    public IRestClient CreateInjectedOptionClient(ILogger logger, RestClientOptions clientOptions )
+    {
+
+        var restOptions = new RestClientOptions($"http://localhost:{PORT}")
+        {
+            Authenticator = new DigestAuthenticator(USERNAME, PASSWORD, logger:  logger, restClientOptions: clientOptions)
         };
 
         return new RestClient(restOptions);

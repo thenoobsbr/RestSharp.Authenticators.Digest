@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Cryptography;
@@ -47,6 +48,8 @@ internal class DigestAuthenticatorManager
     /// </summary>
     private string? _realm;
 
+    private readonly RestClientOptions? _handshakeClientOptions;
+
     static DigestAuthenticatorManager()
     {
         _assemblyVersion = Assembly.GetAssembly(typeof(DigestAuthenticatorManager)).GetName().Version;
@@ -60,7 +63,7 @@ internal class DigestAuthenticatorManager
     /// <param name="password">The password.</param>
     /// <param name="timeout">The timeout.</param>
     /// <param name="logger"></param>
-    public DigestAuthenticatorManager(Uri host, string username, string password, TimeSpan timeout, ILogger logger)
+    public DigestAuthenticatorManager(Uri host, string username, string password, TimeSpan timeout, RestClientOptions? handshakeClientOptions, ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -82,6 +85,7 @@ internal class DigestAuthenticatorManager
         _password = password;
         _timeout = timeout;
         _logger = logger;
+        _handshakeClientOptions = handshakeClientOptions;
     }
 
     /// <summary>
@@ -93,7 +97,7 @@ internal class DigestAuthenticatorManager
     public async Task GetDigestAuthHeader(
         string path,
         Method method,
-        IWebProxy? proxy = default)
+        IWebProxy? proxy = null)
     {
         _logger.LogDebug("Initiating GetDigestAuthHeader");
         var uri = new Uri(_host, path);
@@ -103,11 +107,19 @@ internal class DigestAuthenticatorManager
         request.AddOrUpdateHeader("User-Agent", $"RestSharp.Authenticators.Digest/{_assemblyVersion}");
         request.AddOrUpdateHeader("Accept-Encoding", "gzip, deflate, br");
         request.Timeout = _timeout;
-        using var client = new RestClient(new RestClientOptions()
+
+        RestClient client;
+        if (_handshakeClientOptions != null)
         {
-            Proxy = proxy
-        });
+            client =  new RestClient(_handshakeClientOptions);
+        }
+        else
+        {
+            client = new RestClient(new RestClientOptions() { Proxy = proxy });
+        }
+
         var response = await client.ExecuteAsync(request).ConfigureAwait(false);
+        client.Dispose();
         GetDigestDataFromFailResponse(response);
         _logger.LogDebug("GetDigestAuthHeader completed");
     }
