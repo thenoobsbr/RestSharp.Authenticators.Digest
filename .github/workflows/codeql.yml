@@ -10,8 +10,8 @@ on:
 
 jobs:
   analyze:
-    name: CodeQL Security Scan
-    runs-on: windows-latest
+    name: CodeQL Security Scan + Tests + Coverage
+    runs-on: ubuntu-latest
 
     permissions:
       actions: read
@@ -22,13 +22,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 8.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Setup .NET 9.x
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.x'
 
       - name: Restore dependencies
-        run: dotnet restore RestSharp.Authenticators.Digest.sln
+        run: dotnet restore
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -36,7 +41,29 @@ jobs:
           languages: csharp
 
       - name: Build project
-        run: dotnet build RestSharp.Authenticators.Digest.sln --no-restore --configuration Release
+        run: dotnet build --no-restore --configuration Release
 
-      - name: Run CodeQL analysis
+      - name: Run tests
+        run: |
+          dotnet test \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --blame \
+            --results-directory ./TestResults
+
+      - name: Generate coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.3.5
+        with:
+          reports: 'TestResults/**/coverage.cobertura.xml'
+          targetdir: 'CoverageReport'
+          reporttypes: 'HtmlInline;Cobertura'
+          verbosity: 'Info'
+
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: CoverageReport
+
+      - name: Run CodeQL Analysis
         uses: github/codeql-action/analyze@v3
