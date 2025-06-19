@@ -14,9 +14,11 @@ internal class DigestHeader
 
     public const string REALM = "realm";
 
+    public const string OPAQUE = "opaque";
+
     public const string REGEX_PATTERN =
         "realm=\"(?<realm>.*?)\"|qop=(?:\"(?<qop>.*?)\"|(?<qop>[^\",\\s]+))|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"";
-
+    
     private static readonly Regex _regex;
 
     static DigestHeader()
@@ -50,6 +52,11 @@ internal class DigestHeader
             {
                 Nonce = m.Groups[NONCE].Value;
             }
+
+            if (m.Groups[OPAQUE].Success)
+            {
+                Opaque = m.Groups[OPAQUE].Value;
+            }
         }
 
         if (AllDataCorrectFilled())
@@ -65,10 +72,11 @@ internal class DigestHeader
     public string? Nonce { get; }
     public string? Qop { get; }
     public string? Realm { get; }
+    public string? Opaque { get; }
 
     public override string ToString()
     {
-        return $"{nameof(Realm)}=\"{Realm}\"&{nameof(Nonce)}=\"{Nonce}\"&{nameof(Qop)}=\"{Qop}\"";
+        return $"{nameof(Realm)}=\"{Realm}\"&{nameof(Nonce)}=\"{Nonce}\"&{nameof(Qop)}=\"{Qop}\"&{nameof(Opaque)}=\"{Opaque}\"";
     }
 
     private bool AllDataCorrectFilled()
