@@ -49,6 +49,10 @@ internal class DigestAuthenticatorManager
     private string? _realm;
 
     private readonly RestClientOptions? _handshakeClientOptions;
+    /// <summary>
+    ///     The opaque that is returned by the first digest request (without the data).
+    /// </summary>
+    private string? _opaque;
 
     static DigestAuthenticatorManager()
     {
@@ -142,6 +146,7 @@ internal class DigestAuthenticatorManager
                $"uri=\"{digestUri}\"," +
                "algorithm=MD5," +
                $"response=\"{digestResponse}\"," +
+               (!string.IsNullOrWhiteSpace(_opaque) ? $"opaque=\"{_opaque}\"," : string.Empty) +
                $"qop={_qop}," +
                $"nc={DigestHeader.NONCE_COUNT:00000000}," +
                $"cnonce=\"{_cnonce}\"";
@@ -196,5 +201,14 @@ internal class DigestAuthenticatorManager
         _realm = digestHeader.Realm;
         _nonce = digestHeader.Nonce;
         _qop = digestHeader.Qop;
+        if (!string.IsNullOrWhiteSpace(_qop) && _qop!.Contains(','))
+        {
+            _qop = _qop!
+                .Split(',')
+                .Select(q => q.Trim())
+                .FirstOrDefault(q => q.Equals("auth", StringComparison.OrdinalIgnoreCase)) // prefer "auth" if the server offered several
+                ?? _qop.Split(',')[0].Trim();
+        }
+        _opaque = digestHeader.Opaque;
     }
 }

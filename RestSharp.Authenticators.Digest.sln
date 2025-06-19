@@ -25,6 +25,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "images", "images", "{AB3531
 		images\icon.png = images\icon.png
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{E1BF084D-B1BB-4A98-9B19-55A78DD0CBB9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{46506451-F83B-4074-9BF7-D05E3CBB7D05}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\codeql.yml = .github\workflows\codeql.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +73,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{CBC300D5-B57C-4588-BE2D-26AFF9D102F9} = {1D1F223D-4333-4699-BB10-8E1111DD0D75}
 		{607B2AF3-A2CB-47D3-AA26-B8E79E93A4EE} = {EB4DC82C-C9F5-4745-82A9-D1287A1BBC3F}
+		{46506451-F83B-4074-9BF7-D05E3CBB7D05} = {E1BF084D-B1BB-4A98-9B19-55A78DD0CBB9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CFB144EC-8162-4D4F-A173-0E97D11BD3D8}
