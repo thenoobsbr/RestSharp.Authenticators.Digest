@@ -1,9 +1,14 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
-using FluentAssertions;
+
 using Microsoft.Extensions.Logging;
+
 using NSubstitute;
+
 using RestSharp.Authenticators.Digest.Tests.Fixtures;
+
+using Shouldly;
+
 using Xunit;
 
 namespace RestSharp.Authenticators.Digest.Tests;
@@ -34,7 +39,7 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
         var client = _fixture.CreateClient(loggerMock);
         var response = await client.ExecuteAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         loggerMock.ReceivedWithAnyArgs().LogDebug("NONONO");
     }
 
@@ -42,7 +47,7 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
     [Fact]
     public async Task Given_ADigestAuthEndpoint_When_ITryToInjectOwnClient_Then_TheAuthMustBeResolved()
     {
-        bool proxyCalled = false;
+        var proxyCalled = false;
 
         var loggerMock = Substitute.For<ILogger>();
         loggerMock.BeginScope("DigestServerStub");
@@ -50,7 +55,7 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
         var request = new RestRequest("values");
         request.AddHeader("Content-Type", "application/json");
 
-        RestClientOptions options = new RestClientOptions()
+        var options = new RestClientOptions
         {
             Proxy = new TestProxy(() => proxyCalled = true)
         };
@@ -58,10 +63,9 @@ public class DigestIntegrationTest : IClassFixture<DigestServerStub>
         var client = _fixture.CreateInjectedOptionClient(loggerMock, options);
         var response = await client.ExecuteAsync(request);
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
         loggerMock.ReceivedWithAnyArgs().LogDebug("NONONO");
 
         Assert.True(proxyCalled, "Injected RestClientOptions.Proxy should be used in digest handshake.");
-
     }
 }

@@ -7,28 +7,36 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Logging;
 
 namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
 
 public class DigestServerStub : IAsyncDisposable
 {
-    private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly Task _serverTask;
+    private const string PASSWORD = "test-password";
+    private const int PORT = 8080;
 
     private const string REALM = "test-realm";
     private const string USERNAME = "test-user";
-    private const string PASSWORD = "test-password";
-    private const int PORT = 8080;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly Task _serverTask;
 
     public DigestServerStub()
     {
         var nonce = GenerateNonce();
 
-        _cancellationTokenSource = new CancellationTokenSource();
-
         _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
         Console.WriteLine($"Server started! port: {PORT}.");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        Console.WriteLine("Shutting down the server...");
+        await _cancellationTokenSource.CancelAsync();
+        _cancellationTokenSource.Dispose();
+        await _serverTask;
     }
 
     public IRestClient CreateClient(ILogger logger)
@@ -41,23 +49,15 @@ public class DigestServerStub : IAsyncDisposable
         return new RestClient(restOptions);
     }
 
-    public IRestClient CreateInjectedOptionClient(ILogger logger, RestClientOptions clientOptions )
+    public IRestClient CreateInjectedOptionClient(ILogger logger, RestClientOptions clientOptions)
     {
-
         var restOptions = new RestClientOptions($"http://localhost:{PORT}")
         {
-            Authenticator = new DigestAuthenticator(USERNAME, PASSWORD, logger:  logger, restClientOptions: clientOptions)
+            Authenticator =
+                new DigestAuthenticator(USERNAME, PASSWORD, logger: logger, restClientOptions: clientOptions)
         };
 
         return new RestClient(restOptions);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        GC.SuppressFinalize(this);
-        Console.WriteLine("Shutting down the server...");
-        _cancellationTokenSource.Cancel();
-        await _serverTask;
     }
 
     private static string CalculateMD5Hash(string input)
@@ -80,7 +80,8 @@ public class DigestServerStub : IAsyncDisposable
         return Convert.ToBase64String(nonceBytes);
     }
 
-    private static bool IsDigestAuthenticated(HttpListenerRequest request, string realm, string username, string password, string nonce)
+    private static bool IsDigestAuthenticated(HttpListenerRequest request, string realm, string username,
+        string password, string nonce)
     {
         var authorizationHeader = request.Headers["Authorization"];
 
@@ -116,7 +117,8 @@ public class DigestServerStub : IAsyncDisposable
         var hash2 = CalculateMD5Hash($"{request.HttpMethod.ToUpperInvariant()}:{uri}");
 
         var expectedResponse =
-            CalculateMD5Hash($"{hash1}:{receivedNonce}:{DigestHeader.NONCE_COUNT:00000000}:{receivedCNonce}:{receivedQop}:{hash2}");
+            CalculateMD5Hash(
+                $"{hash1}:{receivedNonce}:{DigestHeader.NONCE_COUNT:00000000}:{receivedCNonce}:{receivedQop}:{hash2}");
 
         return expectedResponse == receivedResponse;
     }
@@ -165,4 +167,5 @@ public class DigestServerStub : IAsyncDisposable
 
         listener.Stop();
     }
+
 }
