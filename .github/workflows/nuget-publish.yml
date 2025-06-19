@@ -33,7 +33,7 @@ jobs:
       - name: Pack with symbols
         run: |
           VERSION=${GITHUB_REF_NAME}
-          dotnet pack RestSharp.Authenticators.Digest/RestSharp.Authenticators.Digest.csproj \
+          dotnet pack \
             --configuration Release \
             -p:Version=$VERSION \
             -p:IncludeSymbols=true \
