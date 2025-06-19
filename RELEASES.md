@@ -19,3 +19,7 @@
 ## v2.0.0
 
 - Changes the compatibility to the RestSharp version `111.2.0` or greater. 
+
+## v2.0.1
+
+- Add ability to change client options from digest RestClient object

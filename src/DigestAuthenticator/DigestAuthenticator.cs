@@ -16,6 +16,7 @@ public class DigestAuthenticator : IAuthenticator
 
     private readonly string _username;
     private readonly TimeSpan _timeout;
+    private readonly RestClientOptions? _handshakeClientOptions;
 
     /// <summary>
     ///     Creates a new instance of <see cref="DigestAuthenticator" /> class.
@@ -24,7 +25,7 @@ public class DigestAuthenticator : IAuthenticator
     /// <param name="password">The password.</param>
     /// <param name="logger">The optional logger.</param>
     /// <param name="timeout">The request timeout.</param>
-    public DigestAuthenticator(string username, string password, int timeout = DEFAULT_TIMEOUT, ILogger? logger = null)
+    public DigestAuthenticator(string username, string password, int timeout = DEFAULT_TIMEOUT, ILogger? logger = null, RestClientOptions? restClientOptions=null)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -45,6 +46,7 @@ public class DigestAuthenticator : IAuthenticator
         _password = password;
         _timeout = TimeSpan.FromMilliseconds(timeout);
         _logger = logger ?? NullLogger.Instance;
+        _handshakeClientOptions = restClientOptions;
     }
 
     /// <inheritdoc cref="IAuthenticator" />
@@ -52,8 +54,8 @@ public class DigestAuthenticator : IAuthenticator
     {
         _logger.LogDebug("Initiate Digest authentication");
         var uri = client.BuildUri(request);
-        var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, _timeout, _logger);
-        await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method,client.Options.Proxy).ConfigureAwait(false);
+        var manager = new DigestAuthenticatorManager(client.BuildUri(new RestRequest()), _username, _password, _timeout, _handshakeClientOptions, _logger);
+        await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method, client.Options.Proxy).ConfigureAwait(false);
         var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
         request.AddOrUpdateHeader("Connection", "Keep-Alive");
         request.AddOrUpdateHeader(KnownHeaders.Authorization, digestHeader);
