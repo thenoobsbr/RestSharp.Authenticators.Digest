@@ -30,6 +30,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{46506451-F83B-4074-9BF7-D05E3CBB7D05}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\codeql.yml = .github\workflows\codeql.yml
+		.github\workflows\nuget-publish.yml = .github\workflows\nuget-publish.yml
 	EndProjectSection
 EndProject
 Global
