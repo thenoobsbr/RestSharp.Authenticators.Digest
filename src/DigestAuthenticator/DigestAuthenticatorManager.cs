@@ -2,13 +2,14 @@
 using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Net.Security;
-using System.Reflection;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Logging;
+
+using RestSharp.Authenticators.Digest.Exceptions;
 
 namespace RestSharp.Authenticators.Digest;
 
@@ -17,15 +18,12 @@ namespace RestSharp.Authenticators.Digest;
 /// </summary>
 internal class DigestAuthenticatorManager
 {
-    private static readonly Version _assemblyVersion;
-
+    private static readonly Version _assemblyVersion = AssemblyMarker.Self.GetName().Version;
+    private readonly RestClientOptions? _handshakeClientOptions;
     private readonly Uri _host;
-
-    private readonly string _password;
-
-    private readonly TimeSpan _timeout;
     private readonly ILogger _logger;
-
+    private readonly string _password;
+    private readonly TimeSpan _timeout;
     private readonly string _username;
 
     /// <summary>
@@ -39,6 +37,11 @@ internal class DigestAuthenticatorManager
     private string? _nonce;
 
     /// <summary>
+    ///     The opaque that is returned by the first digest request (without the data).
+    /// </summary>
+    private string? _opaque;
+
+    /// <summary>
     ///     The qop that is returned by the first digest request (without the data).
     /// </summary>
     private string? _qop;
@@ -48,17 +51,6 @@ internal class DigestAuthenticatorManager
     /// </summary>
     private string? _realm;
 
-    private readonly RestClientOptions? _handshakeClientOptions;
-    /// <summary>
-    ///     The opaque that is returned by the first digest request (without the data).
-    /// </summary>
-    private string? _opaque;
-
-    static DigestAuthenticatorManager()
-    {
-        _assemblyVersion = Assembly.GetAssembly(typeof(DigestAuthenticatorManager)).GetName().Version;
-    }
-
     /// <summary>
     ///     Creates a new instance of <see cref="DigestAuthenticatorManager" /> class.
     /// </summary>
@@ -67,7 +59,14 @@ internal class DigestAuthenticatorManager
     /// <param name="password">The password.</param>
     /// <param name="timeout">The timeout.</param>
     /// <param name="logger"></param>
-    public DigestAuthenticatorManager(Uri host, string username, string password, TimeSpan timeout, RestClientOptions? handshakeClientOptions, ILogger logger)
+    /// <param name="handshakeClientOptions"></param>
+    public DigestAuthenticatorManager(
+        Uri host,
+        string username,
+        string password,
+        TimeSpan timeout,
+        RestClientOptions? handshakeClientOptions,
+        ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -112,15 +111,9 @@ internal class DigestAuthenticatorManager
         request.AddOrUpdateHeader("Accept-Encoding", "gzip, deflate, br");
         request.Timeout = _timeout;
 
-        RestClient client;
-        if (_handshakeClientOptions != null)
-        {
-            client =  new RestClient(_handshakeClientOptions);
-        }
-        else
-        {
-            client = new RestClient(new RestClientOptions() { Proxy = proxy });
-        }
+        var client = _handshakeClientOptions != null
+            ? new RestClient(_handshakeClientOptions)
+            : new RestClient(new RestClientOptions { Proxy = proxy });
 
         var response = await client.ExecuteAsync(request).ConfigureAwait(false);
         client.Dispose();
@@ -176,14 +169,15 @@ internal class DigestAuthenticatorManager
 
         if (response is not { StatusCode: HttpStatusCode.Unauthorized })
         {
-            _logger.LogWarning("Response status code not supported for fail authentication. {StatusCode}", response.StatusCode);
-            throw new Exception(response.ErrorMessage);
+            _logger.LogWarning("Response status code not supported for fail authentication. {StatusCode}",
+                response.StatusCode);
+            throw new UnexpectedStatusCodeException(response.ErrorMessage);
         }
 
         var header = response
             .Headers?
             .First(h => string.Equals(h.Name, "WWW-Authenticate", StringComparison.OrdinalIgnoreCase))
-            .Value?
+            .Value
             .ToString();
 
         if (string.IsNullOrWhiteSpace(header))
@@ -204,11 +198,14 @@ internal class DigestAuthenticatorManager
         if (!string.IsNullOrWhiteSpace(_qop) && _qop!.Contains(','))
         {
             _qop = _qop!
-                .Split(',')
-                .Select(q => q.Trim())
-                .FirstOrDefault(q => q.Equals("auth", StringComparison.OrdinalIgnoreCase)) // prefer "auth" if the server offered several
-                ?? _qop.Split(',')[0].Trim();
+                       .Split(',')
+                       .Select(q => q.Trim())
+                       .FirstOrDefault(q =>
+                           // prefer "auth" if the server offered several
+                           q.Equals("auth", StringComparison.OrdinalIgnoreCase))
+                   ?? _qop.Split(',')[0].Trim();
         }
+
         _opaque = digestHeader.Opaque;
     }
 }

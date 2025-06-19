@@ -8,7 +8,7 @@
 
 ## v1.5.0
 
-- Adjusts the nuget package; 
+- Adjusts the nuget package;
 - Adds optional ILogger to the DigestAuthenticator constructor;
 - Adds optional request timeout to the DigestAuthenticator constructor;
 
@@ -18,8 +18,8 @@
 
 ## v2.0.0
 
-- Changes the compatibility to the RestSharp version `111.2.0` or greater. 
+- Changes the compatibility to the RestSharp version `111.2.0` or greater.
 
-## v2.0.1
+## v2.1.0
 
 - Add ability to change client options from digest RestClient object

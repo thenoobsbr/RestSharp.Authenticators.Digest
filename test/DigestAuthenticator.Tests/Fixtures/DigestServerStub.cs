@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,7 +15,16 @@ namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
 public class DigestServerStub : IAsyncDisposable
 {
     private const string PASSWORD = "test-password";
-    private const int PORT = 8080;
+
+#if NET6_0
+    private const int PORT = 8086;
+#elif NET7_0
+    private const int PORT = 8087;
+#elif NET8_0
+    private const int PORT = 8088;
+#else
+    private const int PORT = 8089;
+#endif
 
     private const string REALM = "test-realm";
     private const string USERNAME = "test-user";
@@ -34,7 +43,11 @@ public class DigestServerStub : IAsyncDisposable
     {
         GC.SuppressFinalize(this);
         Console.WriteLine("Shutting down the server...");
+#if NET8_0_OR_GREATER
         await _cancellationTokenSource.CancelAsync();
+#else
+        _cancellationTokenSource.Cancel();
+#endif
         _cancellationTokenSource.Dispose();
         await _serverTask;
     }
@@ -167,5 +180,4 @@ public class DigestServerStub : IAsyncDisposable
 
         listener.Stop();
     }
-
 }

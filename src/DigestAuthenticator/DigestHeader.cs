@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+
 using Microsoft.Extensions.Logging;
 
 namespace RestSharp.Authenticators.Digest;
@@ -7,26 +8,18 @@ namespace RestSharp.Authenticators.Digest;
 internal class DigestHeader
 {
     public const string NONCE = "nonce";
-
     public const int NONCE_COUNT = 1;
-
-    public const string QOP = "qop";
-
-    public const string REALM = "realm";
-
     public const string OPAQUE = "opaque";
+    public const string QOP = "qop";
+    public const string REALM = "realm";
 
     public const string REGEX_PATTERN =
         "realm=\"(?<realm>.*?)\"|qop=(?:\"(?<qop>.*?)\"|(?<qop>[^\",\\s]+))|nonce=\"(?<nonce>.*?)\"|stale=\"(?<stale>.*?)\"|opaque=\"(?<opaque>.*?)\"|domain=\"(?<domain>.*?)\"";
-    
-    private static readonly Regex _regex;
 
-    static DigestHeader()
-    {
-        _regex = new Regex(
-            REGEX_PATTERN,
-            RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    }
+    private static readonly Regex _regex = new(
+        REGEX_PATTERN,
+        RegexOptions.IgnoreCase | RegexOptions.Compiled,
+        TimeSpan.FromMilliseconds(500));
 
     public DigestHeader(string authenticateHeader, ILogger logger)
     {
@@ -64,19 +57,21 @@ internal class DigestHeader
             return;
         }
 
-        logger.LogError("Cannot load all required data from {AuthenticateHeaderName}. Data: {AuthenticateHeader}", nameof(authenticateHeader), authenticateHeader);
+        logger.LogError("Cannot load all required data from {AuthenticateHeaderName}. Data: {AuthenticateHeader}",
+            nameof(authenticateHeader), authenticateHeader);
         throw new ArgumentException(
             $"Cannot load all required data from {nameof(authenticateHeader)}. Data: {authenticateHeader}");
     }
 
     public string? Nonce { get; }
+    public string? Opaque { get; }
     public string? Qop { get; }
     public string? Realm { get; }
-    public string? Opaque { get; }
 
     public override string ToString()
     {
-        return $"{nameof(Realm)}=\"{Realm}\"&{nameof(Nonce)}=\"{Nonce}\"&{nameof(Qop)}=\"{Qop}\"&{nameof(Opaque)}=\"{Opaque}\"";
+        return
+            $"{nameof(Realm)}=\"{Realm}\"&{nameof(Nonce)}=\"{Nonce}\"&{nameof(Qop)}=\"{Qop}\"&{nameof(Opaque)}=\"{Opaque}\"";
     }
 
     private bool AllDataCorrectFilled()

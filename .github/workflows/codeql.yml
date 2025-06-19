@@ -2,9 +2,9 @@ name: "CodeQL - C#"
 
 on:
   push:
-    branches: [master, main]
+    branches: [ master, main ]
   pull_request:
-    branches: [master, main]
+    branches: [ master, main ]
   schedule:
     - cron: '0 4 * * 0'  # Runs every Sunday at 4AM
 
@@ -21,6 +21,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup .NET 6.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.x'
 
       - name: Setup .NET 8.x
         uses: actions/setup-dotnet@v4
