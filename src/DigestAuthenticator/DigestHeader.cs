@@ -77,7 +77,6 @@ internal class DigestHeader
     private bool AllDataCorrectFilled()
     {
         return !string.IsNullOrWhiteSpace(Nonce)
-               && !string.IsNullOrWhiteSpace(Qop)
                && !string.IsNullOrWhiteSpace(Realm);
     }
 }

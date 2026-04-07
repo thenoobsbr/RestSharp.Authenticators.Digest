@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
+namespace RestSharp.Authenticators.Digest.IntegrationTests.Fixtures;
 
 internal class TestProxy : IWebProxy
 {

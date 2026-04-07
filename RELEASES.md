@@ -1,5 +1,16 @@
 # Release notes
 
+## v3.0.0
+
+- Updates RestSharp dependency to version 114.0.0;
+- Adds CancellationToken support to the Authenticate method (IAuthenticator breaking change in RestSharp 114);
+- Threads CancellationToken through the digest handshake pipeline;
+- Adds backward compatibility layer (DigestAuthenticatorLegacy) for consumers upgrading from v2.x;
+- Drops net6.0 test target (EOL);
+- Adds comprehensive unit tests for DigestAuthenticator, DigestHeader, DigestAuthenticatorManager, and
+  DigestAuthenticatorLegacy;
+- Adds integration tests for error scenarios, wrong credentials, multiple HTTP methods, and concurrent requests;
+
 ## v1.4.0
 
 - Fixies the authentication when the qop value comes without `"`;

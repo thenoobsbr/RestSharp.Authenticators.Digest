@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
@@ -96,11 +97,15 @@ internal class DigestAuthenticatorManager
     /// </summary>
     /// <param name="path">The request path.</param>
     /// <param name="method">The request method.</param>
+    /// <param name="originalRequest">The original request whose parameters will be copied to the handshake request.</param>
     /// <param name="proxy">The request proxy.</param>
+    /// <param name="cancellationToken"></param>
     public async Task GetDigestAuthHeader(
         string path,
         Method method,
-        IWebProxy? proxy = null)
+        RestRequest? originalRequest = null,
+        IWebProxy? proxy = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Initiating GetDigestAuthHeader");
         var uri = new Uri(_host, path);
@@ -111,11 +116,24 @@ internal class DigestAuthenticatorManager
         request.AddOrUpdateHeader("Accept-Encoding", "gzip, deflate, br");
         request.Timeout = _timeout;
 
+        if (originalRequest is not null)
+        {
+            foreach (var parameter in originalRequest.Parameters)
+            {
+                if (parameter.Type != ParameterType.HttpHeader)
+                {
+                    request.AddParameter(parameter);
+                }
+            }
+        }
+
         var client = _handshakeClientOptions != null
             ? new RestClient(_handshakeClientOptions)
             : new RestClient(new RestClientOptions { Proxy = proxy });
 
-        var response = await client.ExecuteAsync(request).ConfigureAwait(false);
+        var response = await client
+            .ExecuteAsync(request, cancellationToken)
+            .ConfigureAwait(false);
         client.Dispose();
         GetDigestDataFromFailResponse(response);
         _logger.LogDebug("GetDigestAuthHeader completed");
@@ -131,14 +149,29 @@ internal class DigestAuthenticatorManager
     {
         var hash1 = GenerateMD5($"{_username}:{_realm}:{_password}");
         var hash2 = GenerateMD5($"{method.ToString().ToUpperInvariant()}:{digestUri}");
-        var digestResponse =
+
+        if (string.IsNullOrWhiteSpace(_qop))
+        {
+            // RFC 2069: response = MD5(hash1:nonce:hash2), no qop/nc/cnonce
+            var digestResponse = GenerateMD5($"{hash1}:{_nonce}:{hash2}");
+            return $"Digest username=\"{_username}\"," +
+                   $"realm=\"{_realm}\"," +
+                   $"nonce=\"{_nonce}\"," +
+                   $"uri=\"{digestUri}\"," +
+                   "algorithm=MD5," +
+                   $"response=\"{digestResponse}\"" +
+                   (!string.IsNullOrWhiteSpace(_opaque) ? $",opaque=\"{_opaque}\"" : string.Empty);
+        }
+
+        // RFC 2617: response = MD5(hash1:nonce:nc:cnonce:qop:hash2)
+        var digestResponseWithQop =
             GenerateMD5($"{hash1}:{_nonce}:{DigestHeader.NONCE_COUNT:00000000}:{_cnonce}:{_qop}:{hash2}");
         return $"Digest username=\"{_username}\"," +
                $"realm=\"{_realm}\"," +
                $"nonce=\"{_nonce}\"," +
                $"uri=\"{digestUri}\"," +
                "algorithm=MD5," +
-               $"response=\"{digestResponse}\"," +
+               $"response=\"{digestResponseWithQop}\"," +
                (!string.IsNullOrWhiteSpace(_opaque) ? $"opaque=\"{_opaque}\"," : string.Empty) +
                $"qop={_qop}," +
                $"nc={DigestHeader.NONCE_COUNT:00000000}," +

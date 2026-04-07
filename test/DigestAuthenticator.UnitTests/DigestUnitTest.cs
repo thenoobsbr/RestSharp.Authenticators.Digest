@@ -4,7 +4,7 @@ using Shouldly;
 
 using Xunit;
 
-namespace RestSharp.Authenticators.Digest.Tests;
+namespace RestSharp.Authenticators.Digest.UnitTests;
 
 /// <summary>
 ///     The integration tests for <see cref="DigestAuthenticator" />.
