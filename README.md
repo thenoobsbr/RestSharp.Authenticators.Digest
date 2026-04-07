@@ -23,8 +23,9 @@ dotnet add package RestSharp.Authenticators.Digest
 ## ✅ Compatibility
 
 * .NET Standard 2.0
-* .NET Core 3.1+
-* .NET 5, 6, 7, 8, 9+
+* .NET Framework 4.7.1+ (limited by RestSharp 114.0.0)
+* .NET Core 2.0+
+* .NET 5, 6, 7, 8, 9, 10+
 * Fully compatible with `RestClient` from [RestSharp](https://github.com/restsharp/RestSharp)
 
 ---
@@ -65,20 +66,67 @@ namespace Example
 
 ## ✨ Features
 
-* Implements HTTP Digest Authentication (RFC 7616)
-* Nonce and realm support
+* Implements HTTP Digest Authentication with support for both modern and legacy protocols:
+  * **RFC 2617 / RFC 7616** — Full digest authentication with `qop=auth`, `cnonce`, and nonce counting
+  * **RFC 2069** — Legacy digest authentication without `qop` (for older servers)
+* Automatic protocol detection — the library reads the server's `WWW-Authenticate` challenge and selects the correct hash format
+* Nonce, realm, opaque, and qop support
 * Compatible with servers that require `WWW-Authenticate: Digest`
 * Stateless and thread-safe
 * Works with `RestClient` and `IRestRequest` out of the box
 
 ---
 
+## 🔐 Protocol Support
+
+The library **automatically detects** which protocol the server uses based on the `WWW-Authenticate` response header. No configuration is needed — the same code works for both protocols.
+
+### RFC 2617 / RFC 7616 (modern servers)
+
+When the server includes `qop` in its challenge (e.g., `qop="auth"` or `qop="auth,auth-int"`), the library uses the full digest scheme:
+
+```
+response = MD5(MD5(username:realm:password):nonce:nc:cnonce:qop:MD5(method:uri))
+```
+
+The generated `Authorization` header includes `qop`, `nc`, and `cnonce` fields.
+
+### RFC 2069 (legacy servers)
+
+When the server **does not** include `qop` in its challenge, the library falls back to the simplified RFC 2069 scheme:
+
+```
+response = MD5(MD5(username:realm:password):nonce:MD5(method:uri))
+```
+
+The generated `Authorization` header omits `qop`, `nc`, and `cnonce` fields, as required by the legacy protocol.
+
+### Usage
+
+The usage is identical for both protocols — just create the authenticator and let the library handle the rest:
+
+```csharp
+var restOptions = new RestClientOptions("https://api.myhost.com/api/v1")
+{
+    Authenticator = new DigestAuthenticator("username", "password")
+};
+
+var client = new RestClient(restOptions);
+var request = new RestRequest("resource");
+var response = await client.ExecuteAsync(request);
+```
+
+This works transparently whether the server uses RFC 2069 or RFC 2617/7616.
+
+---
+
 ## 🧪 Testing
 
-Digest-authenticated servers can be mocked for integration testing using test frameworks or by hitting known
-Digest-protected endpoints.
+The project includes comprehensive unit and integration tests covering both RFC 2069 and RFC 2617/7616 protocols.
 
-Tests for multiple target frameworks (`net6.0`, `net8.0`, `net9.0`) are included.
+Integration tests use embedded HTTP listeners that simulate digest servers for both protocols.
+
+Tests target multiple frameworks (`net8.0`, `net10.0`).
 
 ---
 

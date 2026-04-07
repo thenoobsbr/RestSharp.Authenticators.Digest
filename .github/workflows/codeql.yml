@@ -20,30 +20,26 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 6.x
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '6.x'
+        uses: actions/checkout@v6
 
       - name: Setup .NET 8.x
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.x'
 
-      - name: Setup .NET 9.x
-        uses: actions/setup-dotnet@v4
+      - name: Setup .NET 10.x
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.x'
+          dotnet-version: '10.x'
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: csharp
+          build-mode: manual
 
       - name: Build project
         run: dotnet build --no-restore --configuration Release
@@ -57,7 +53,7 @@ jobs:
             --results-directory ./TestResults
 
       - name: Generate coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@5.3.5
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.4
         with:
           reports: 'TestResults/**/coverage.cobertura.xml'
           targetdir: 'CoverageReport'
@@ -65,10 +61,10 @@ jobs:
           verbosity: 'Info'
 
       - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: CoverageReport
 
       - name: Run CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4

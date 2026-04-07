@@ -10,39 +10,40 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
-namespace RestSharp.Authenticators.Digest.Tests.Fixtures;
+namespace RestSharp.Authenticators.Digest.IntegrationTests.Fixtures;
 
-public class DigestServerStub : IAsyncDisposable
+/// <summary>
+///     A digest server stub that implements RFC 2069 (no qop in WWW-Authenticate challenge).
+/// </summary>
+public partial class DigestRfc2069ServerStub : IAsyncDisposable
 {
     private const string PASSWORD = "test-password";
 
-#if NET6_0
-    private const int PORT = 8086;
-#elif NET7_0
-    private const int PORT = 8087;
-#elif NET8_0
-    private const int PORT = 8088;
+#if NET8_0
+    private const int PORT = 8098;
 #else
-    private const int PORT = 8089;
+    private const int PORT = 8099;
 #endif
 
-    private const string REALM = "test-realm";
+    private const string REALM = "test-realm-rfc2069";
     private const string USERNAME = "test-user";
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Task _serverTask;
 
-    public DigestServerStub()
+    public static string BaseUrl => $"http://localhost:{PORT}";
+
+    public DigestRfc2069ServerStub()
     {
         var nonce = GenerateNonce();
 
         _serverTask = StartServer(REALM, USERNAME, PASSWORD, nonce, PORT);
-        Console.WriteLine($"Server started! port: {PORT}.");
+        Console.WriteLine($"RFC 2069 Server started! port: {PORT}.");
     }
 
     public async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
-        Console.WriteLine("Shutting down the server...");
+        Console.WriteLine("Shutting down the RFC 2069 server...");
 #if NET8_0_OR_GREATER
         await _cancellationTokenSource.CancelAsync();
 #else
@@ -52,7 +53,7 @@ public class DigestServerStub : IAsyncDisposable
         await _serverTask;
     }
 
-    public IRestClient CreateClient(ILogger logger)
+    public static IRestClient CreateClient(ILogger logger)
     {
         var restOptions = new RestClientOptions($"http://localhost:{PORT}")
         {
@@ -62,21 +63,10 @@ public class DigestServerStub : IAsyncDisposable
         return new RestClient(restOptions);
     }
 
-    public IRestClient CreateInjectedOptionClient(ILogger logger, RestClientOptions clientOptions)
-    {
-        var restOptions = new RestClientOptions($"http://localhost:{PORT}")
-        {
-            Authenticator =
-                new DigestAuthenticator(USERNAME, PASSWORD, logger: logger, restClientOptions: clientOptions)
-        };
-
-        return new RestClient(restOptions);
-    }
-
     private static string CalculateMD5Hash(string input)
     {
         var inputBytes = Encoding.ASCII.GetBytes(input);
-        var hash = MD5.Create().ComputeHash(inputBytes);
+        var hash = MD5.HashData(inputBytes);
         var stringBuilder = new StringBuilder();
         hash.ToList().ForEach(b => stringBuilder.Append(b.ToString("x2")));
         return stringBuilder.ToString();
@@ -93,6 +83,9 @@ public class DigestServerStub : IAsyncDisposable
         return Convert.ToBase64String(nonceBytes);
     }
 
+    /// <summary>
+    ///     Validates digest auth using RFC 2069 format: response = MD5(hash1:nonce:hash2), no qop/nc/cnonce.
+    /// </summary>
     private static bool IsDigestAuthenticated(HttpListenerRequest request, string realm, string username,
         string password, string nonce)
     {
@@ -103,7 +96,7 @@ public class DigestServerStub : IAsyncDisposable
             return false;
         }
 
-        var matches = Regex.Matches(authorizationHeader, @"(\w+)=""?([^"",\s]+)""?");
+        var matches = MyRegex().Matches(authorizationHeader);
         var authValues = new Dictionary<string, string>();
         foreach (Match match in matches)
         {
@@ -113,10 +106,14 @@ public class DigestServerStub : IAsyncDisposable
         if (!authValues.TryGetValue("username", out var receivedUsername) ||
             !authValues.TryGetValue("realm", out var receivedRealm) ||
             !authValues.TryGetValue("nonce", out var receivedNonce) ||
-            !authValues.TryGetValue("cnonce", out var receivedCNonce) ||
-            !authValues.TryGetValue("qop", out var receivedQop) ||
             !authValues.TryGetValue("uri", out var uri) ||
             !authValues.TryGetValue("response", out var receivedResponse))
+        {
+            return false;
+        }
+
+        // RFC 2069 should NOT have qop, nc, or cnonce
+        if (authValues.ContainsKey("qop") || authValues.ContainsKey("nc") || authValues.ContainsKey("cnonce"))
         {
             return false;
         }
@@ -129,17 +126,19 @@ public class DigestServerStub : IAsyncDisposable
         var hash1 = CalculateMD5Hash($"{username}:{realm}:{password}");
         var hash2 = CalculateMD5Hash($"{request.HttpMethod.ToUpperInvariant()}:{uri}");
 
-        var expectedResponse =
-            CalculateMD5Hash(
-                $"{hash1}:{receivedNonce}:{DigestHeader.NONCE_COUNT:00000000}:{receivedCNonce}:{receivedQop}:{hash2}");
+        // RFC 2069 format: response = MD5(hash1:nonce:hash2)
+        var expectedResponse = CalculateMD5Hash($"{hash1}:{receivedNonce}:{hash2}");
 
         return expectedResponse == receivedResponse;
     }
 
+    /// <summary>
+    ///     Sends a 401 challenge WITHOUT qop (RFC 2069 style).
+    /// </summary>
     private static void SendDigestAuthenticationChallenge(HttpListenerResponse response, string realm, string nonce)
     {
         response.StatusCode = 401;
-        response.Headers.Add("WWW-Authenticate", $"Digest realm=\"{realm}\", nonce=\"{nonce}\", qop=\"auth\"");
+        response.Headers.Add("WWW-Authenticate", $"Digest realm=\"{realm}\", nonce=\"{nonce}\"");
         response.OutputStream.Close();
     }
 
@@ -180,4 +179,7 @@ public class DigestServerStub : IAsyncDisposable
 
         listener.Stop();
     }
+
+    [GeneratedRegex(@"(\w+)=""?([^"",\s]+)""?")]
+    private static partial Regex MyRegex();
 }

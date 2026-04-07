@@ -17,28 +17,55 @@ Template [PULL REQUEST TEMPLATE](PULL_REQUEST_TEMPLATE.md)
 
 ## Git Commit Messages
 
-- Use the present tense ("Adds feature" not "Added feature");
-- Limit the first line to 72 characters or less;
-- Reference issues and pull requests liberally;
-- Consider starting the commit message with an applicable [gitmoji](https://gitmoji.dev):
-  - :arrow_down: `:arrow_down:` Downgrade dependencies;
-  - :arrow_up: `:arrow_up:` Upgrade dependencies;
-  - :art: `:art:` Improvements for structure / format of the code;
-  - :bug: `:bug:` Fixing a bug;
-  - :bulb: `:bulb:` Add or update comments in source code;
-  - :construction: `:construction:` for working in progress;
-  - :fire: `:fire:` when you removes code or files;
-  - :green_heart: `:green_heart:` when fixing the CI build;
-  - :heavy_minus_sign: `:heavy_minus_sign:` when removing a dependency;
-  - :heavy_plus_sign: `:heavy_plus_sign:` when adding a dependency;
-  - :lock: `:lock:` Fix security issues;
-  - :memo: `:memo:` when writing docs;
-  - :mute: `:mute:` Remove logs;
-  - :rotating_light: `:rotating_light:` when removing linter warnings;
-  - :loud_sound: `:loud_sound:` Add or update logs;
-  - :recycle: `:recycle:` Refactor code.
-  - :sparkles: `:sparkles:` Introduce new features.
-  - :white_check_mark: `:white_check_mark:` when adding tests;
-  - :wrench: `:wrench:` Add or update configuration files;
-  - :zap: `:zap:` when improving performance;
-  - Or feel free to use one of the other gitmojis listed in [gitmoji.dev](https://gitmoji.dev/);
+This project follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+### Format
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Types
+
+| Type | Description |
+|------|-------------|
+| `feat` | A new feature |
+| `fix` | A bug fix |
+| `docs` | Documentation only changes |
+| `style` | Changes that do not affect the meaning of the code (formatting, semicolons, etc.) |
+| `refactor` | A code change that neither fixes a bug nor adds a feature |
+| `perf` | A code change that improves performance |
+| `test` | Adding missing tests or correcting existing tests |
+| `build` | Changes that affect the build system or external dependencies |
+| `ci` | Changes to CI configuration files and scripts |
+| `chore` | Other changes that don't modify src or test files |
+
+### Examples
+
+```
+feat(auth): add CancellationToken support to Authenticate method
+fix(header): handle unquoted qop values in WWW-Authenticate header
+test(integration): add tests for wrong credentials scenario
+docs: update CONTRIBUTING with conventional commits
+build(deps): upgrade RestSharp to 114.0.0
+```
+
+### Breaking changes
+
+Append `!` after the type/scope or add a `BREAKING CHANGE:` footer:
+
+```
+feat(auth)!: require CancellationToken in IAuthenticator.Authenticate
+
+BREAKING CHANGE: Authenticate method signature now includes CancellationToken parameter.
+```
+
+### Guidelines
+
+- Use the present tense ("add feature" not "added feature")
+- Limit the first line to 72 characters or less
+- Reference issues and pull requests liberally

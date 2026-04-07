@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
@@ -56,7 +57,10 @@ public class DigestAuthenticator : IAuthenticator
     }
 
     /// <inheritdoc cref="IAuthenticator" />
-    public async ValueTask Authenticate(IRestClient client, RestRequest request)
+    public async ValueTask Authenticate(
+        IRestClient client,
+        RestRequest request,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("Initiate Digest authentication");
         var uri = client.BuildUri(request);
@@ -68,7 +72,10 @@ public class DigestAuthenticator : IAuthenticator
             _handshakeClientOptions,
             _logger);
 
-        await manager.GetDigestAuthHeader(uri.PathAndQuery, request.Method, client.Options.Proxy).ConfigureAwait(false);
+        await manager
+            .GetDigestAuthHeader(uri.PathAndQuery, request.Method, client.Options.Proxy, cancellationToken)
+            .ConfigureAwait(false);
+
         var digestHeader = manager.GetDigestHeader(uri.PathAndQuery, request.Method);
         request.AddOrUpdateHeader("Connection", "Keep-Alive");
         request.AddOrUpdateHeader(KnownHeaders.Authorization, digestHeader);

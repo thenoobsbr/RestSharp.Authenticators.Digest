@@ -1,0 +1,53 @@
+{
+  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+  "tasks": [
+    {
+      "name": "commit-message-linter",
+      "group": "commit-msg",
+      "command": "dotnet",
+      "args": [
+        "commit-lint",
+        "--commit-file",
+        "${args}",
+        "--commit-message-config-file",
+        ".husky/configs/commit-message-config.json"
+      ]
+    },
+    {
+      "name": "dotnet-format",
+      "group": "pre-commit",
+      "command": "dotnet",
+      "args": [
+        "format",
+        "--include",
+        "${staged}",
+        "--severity",
+        "info"
+      ],
+      "include": [
+        "**/*.cs"
+      ]
+    },
+    {
+      "name": "run-tests",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [
+        "test",
+        "--configuration",
+        "Release"
+      ]
+    },
+    {
+      "name": "check-vulnerabilities",
+      "group": "pre-push",
+      "command": "dotnet",
+      "args": [
+        "list",
+        "package",
+        "--vulnerable",
+        "--include-transitive"
+      ]
+    }
+  ]
+}
