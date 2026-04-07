@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: '0 4 * * 0'  # Runs every Sunday at 4AM
 
+env:
+  HUSKY: 0
+
 jobs:
   analyze:
     name: CodeQL Security Scan + Tests + Coverage

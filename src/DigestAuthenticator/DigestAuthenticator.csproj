@@ -31,7 +31,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <ReleaseNotesFilePath>$(MSBuildThisFileDirectory)..\..\RELEASES.md</ReleaseNotesFilePath>
     <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(ReleaseNotesFilePath)'))</PackageReleaseNotes>
-    <ContinuousIntegrationBuild>True</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
