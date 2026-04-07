@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - 'release/[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   publish:
@@ -19,23 +21,32 @@ jobs:
         with:
           dotnet-version: '10.x'
 
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF}" == refs/heads/release/* ]]; then
+            SEMVER="${GITHUB_REF_NAME#release/}"
+            RC_NUMBER="${GITHUB_RUN_NUMBER}"
+            echo "version=${SEMVER}-rc.${RC_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build with explicit version
         run: |
-          VERSION=${GITHUB_REF_NAME}
           dotnet build \
             --configuration Release \
-            -p:Version=$VERSION \
+            -p:Version=${{ steps.version.outputs.version }} \
             --no-restore
 
       - name: Pack with symbols
         run: |
-          VERSION=${GITHUB_REF_NAME}
           dotnet pack \
             --configuration Release \
-            -p:Version=$VERSION \
+            -p:Version=${{ steps.version.outputs.version }} \
             -p:IncludeSymbols=true \
             -p:SymbolPackageFormat=snupkg \
             --no-build \
